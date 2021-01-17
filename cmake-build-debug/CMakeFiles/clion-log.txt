@@ -1,0 +1,4 @@
+/home/parthajit/software/intellij/CLion-2018.1.4/clion-2018.1.4/bin/cmake/bin/cmake -DCMAKE_BUILD_TYPE=Debug -G "CodeBlocks - Unix Makefiles" /home/parthajit/bioinfo/bpnet_basic_032
+-- Configuring done
+-- Generating done
+-- Build files have been written to: /home/parthajit/bioinfo/bpnet_basic_032/cmake-build-debug
