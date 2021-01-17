@@ -1,3 +1,0 @@
-/home/parthajit/bioinfo/bpnet_basic_032/cmake-build-debug/CMakeFiles/rebuild_cache.dir
-/home/parthajit/bioinfo/bpnet_basic_032/cmake-build-debug/CMakeFiles/edit_cache.dir
-/home/parthajit/bioinfo/bpnet_basic_032/cmake-build-debug/CMakeFiles/bpnet_basic_03.dir
