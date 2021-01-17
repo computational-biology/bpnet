@@ -502,7 +502,7 @@ OvlpOutFileRowArray * populate_array_from_out_file(std::string out_filename){
                   if(line.substr(0, 37) == "#HEADER   Cleaned number of residues:"){
                         ss << line.substr(37, 7);
                         ss>>num_residues;
-                        cout<< "Cleaned number of Residues in .out file = "<<num_residues<<endl;
+                        //cout<< "Cleaned number of Residues in .out file = "<<num_residues<<endl;
                   }
             }
             if(line[0] != '#'){
@@ -2052,7 +2052,7 @@ public:
 
             double result= 0.0;
 
-            cout<<"NUM RESIDUE "<<this->num_residues<<endl;
+            //cout<<"NUM RESIDUE "<<this->num_residues<<endl;
             for(int i=0;i<this->num_residues;i++){
                   //cout<<i<<" of "<<num_residues<<" Started"<<endl;
 //cout<<"A2 i="<<i<<endl;//", j="<<j<<endl;
@@ -2708,11 +2708,16 @@ int main1(int argc, char* argv[]){
 
       if(strncasecmp(argv[1], "-ab" , 10) == 0){
             std::string pdb_accn=argv[2];
+	    cout<<"test1"<<endl;
             OvlpAtomType base_type[] = {Carbon,Nitrogen,Oxygen};
             OvlpSurfaceDataFile * surfgen = new OvlpSurfaceDataFile("./syscon/surface.xyz",base_type,3);
+	    cout<<"test2"<<endl;
             OvlpAllSurfacePoints * all_surf_points = surfgen->generate_surface_points(3);
+	    cout<<"test3"<<endl;
             OvlpRNA_NucVatiants *nucVariants = new OvlpRNA_NucVatiants();
+	    cout<<"test4"<<endl;
             ovlp_base_overlap_comp(pdb_accn, 25.0, surfgen, all_surf_points, nucVariants);
+	    cout<<"test5"<<endl;
             delete all_surf_points;
             delete surfgen;
       }/*else if(strncasecmp(argv[1], "-absummary" , 15){

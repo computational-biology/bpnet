@@ -22,15 +22,15 @@ void sequence_create(sequence_t* seq, const char* dat_file_name){
     seq->size = 0;
     char line[100];
     int len;
-    cout<<"One\n";
+    //cout<<"One\n";
     while(fgets(line, sizeof(line), fp) != NULL) {
-    cout<<"coming inside="<<line<<"END"<<endl;
+    //cout<<"coming inside="<<line<<"END"<<endl;
         if(line[0] == '>') continue;
         len = sprintf(tmpseq+seq->size,"%s", line);
-        cout<<"Line="<<line<<", len="<<len<<"."<<endl;
+      //  cout<<"Line="<<line<<", len="<<len<<"."<<endl;
         seq->size += len - 1; // To discard \n
     }
-    cout<<"Two\n";
+    //cout<<"Two\n";
     /* Allocate the memory of the struture and copy */
 
     seq->sec_seq_str = (char*) malloc((seq->size+2)* sizeof(char));
