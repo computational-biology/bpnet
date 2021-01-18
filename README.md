@@ -1,7 +1,6 @@
-This program is for finding the base-pair network In RNAs.
- It assumes a .out or .rob file as its input.
- In case of .rob file it expects .out file as well.
- In both the cases, it assumes the .dat file.
+This program is for finding the base-pair networks as well as overlap networks In DNA/RNAs.
+ It assumes a cif, pdb or out file as its input.
+
  The switches are:
      -netsize=5 (prints only network of size 5), Default is 3
      -netsize=5-10 (prints only network of size 5 to 10), Default is 3-30
@@ -13,13 +12,14 @@ This program is for finding the base-pair network In RNAs.
      -adj=true for creation of adjacency matrix. Default false
 
 
- It generates a .edge file for edge lists, .adj(optional) file for adjacency
+ It generates a .edge file for edge lists, .adj file for adjacency
  matrix for every file. It also generates a pairchain.net for all files.
  It works for multiple files, like, bpnet *.out -netsize=4 -exdeg=3
  
+ Installation: Follow the installation_guide.txt
  
- Compilation:   g++ -std=c++03 -static -I./include main.cpp -o bpnet
+ Compilation:  Follow the installation_guide.txt
  
- run:    ./bpnet [optional switches] 1a9n.out 
+ run:    bpnet.linux [optional switches] 1ehz.cif 
 
 

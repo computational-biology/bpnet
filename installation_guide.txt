@@ -1,0 +1,96 @@
+The Bpnet program is a stand alone command line program for Linux.
+The program is written in C++ and Fortran.
+
+Once you download the zip or tar.zip file and extract it, 
+you will get several folders. 
+
+FOR READY EXECUTABLE:
+
+     1.  go to the bin directory. you will get two executables named
+            i)   bpnet.linux
+	   ii)   bpnet.linux.parallel
+     2.  Copy them to your suitable directory. We prefer
+
+          sudo cp bpnet.linux /usr/local/bin
+          sudo cp bpnet.linux.parallel /usr/local/bin
+
+     3. go to sysfiles directory and place all the files inside 
+        sysfiles directory to a suitable directory. We prefer,
+	   
+          sudo cp *.name /usr/local/bin
+          sudo cp *.xyz  /usr/local/bin
+
+     4.  set the environment variables. The program needs to know 
+         the path where the .name and .xyz files are kept. So, do the following
+
+	  i) Open your .bashrc file.
+	
+	  ii) append these two lines in .bashrc file
+	      
+	      export OMP_NUM_THREADS=4    (Assuming you have a 4-cpu machine)
+
+	      export  NUCLEIC_ACID_DIR=/usr/local/bin/
+
+	      (Assuming .name and .xyz files of sysfile directory are placed
+	       in /usr/local/bin)
+
+     5.  Done.
+
+
+RUN:
+     We have given two sample mmCIF files in the data folder.
+     place them in a folder. Go to that folder from terminal
+     and supply the following command.
+
+     SERIAL RUN:
+
+             bpnet.linux 1s72.cif      (For base pair network)
+
+	     bplet.linux 1s72.cif -overlap=true   (For overlap network)
+
+
+     
+     PARALLEL RUN:
+
+             bpnet.linux.parallel 1s72.cif      (For base pair network)
+
+	     bplet.linux.parallel 1s72.cif -overlap=true   (For overlap network)
+
+
+
+COMPILATION:
+     If the given execulatbles do not work for you, we provide the source code.
+     The compilation process is as follows.
+
+     SERIAL MODE COMPILATION:
+         
+         1. Using terminal go to the src directory and do the following usaing terminal. 
+         2. Rename the Makefile_serial to Makefile
+         3. Enter the following command
+                  make clean
+         4. Then run the following command
+                  make
+	 
+
+     PARALLEL MODE COMPILATION:
+         1. Using terminal go to the src directory and do the following usaing terminal.
+         2. Rename the Makefile_parallel to Makefile
+         3. Enter the following command
+                  make clean
+         4. Then run the following command
+                  make
+	 
+
+     After compilation, place the executables in to /usr/local/bin. The .name and .xyz files related 
+     tasks are same. So also for environment variables. For these follow step 3-5 from "FOR READY EXECUTABLE:" given at the bigining.
+     
+REPORTING BUGS:
+     For any king of problems and bugs, feel free to report to
+     
+     Dr. Parthajit Roy
+     cs.parthajit.roy@gmail.com
+     
+     OR
+     Prof. Dhananjay Bhattacharyya
+     bhattasinp@gmail.com
+
