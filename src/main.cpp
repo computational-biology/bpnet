@@ -736,8 +736,10 @@ int main(int argc, char* argv[]) {
 	      /*if(syspar.overlap_flag == 0){
 		    strcpy(corparam,"-NOCOR");
 	      }*/
-	      if(ext == "cif"){
-		    strcpy(cifparam, "-cif");
+	      if(ext == "cif" || ext == "pdb"){
+		    if(ext == "cif"){
+			  strcpy(cifparam, "-cif");
+		    }
 		    callbpfindc(cifparam, accnparam, htparam, 
 				hdparam, hdvalparam, angparam, 
 				angvalparam, chparam, sgparam, 
