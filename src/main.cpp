@@ -184,7 +184,7 @@ void populate_edges_from_rob_format(Graph* g, vector<vector<string> >& rob_file_
 
 
 
-        //cout<<"v1="<<v1<<", v2="<<ovlpval<<"."<<endl;
+        //cout<<"v1="<<v1<<", v2="<<v2<<", ovlpval="<<ovlpval<<"."<<endl;
         //string base_type_to = to_res+":"+frm_res+"-"+pair_type;
         string base_type_to = pair_type;
         //cout<< base_type_from<<","<<base_type_to<<endl;

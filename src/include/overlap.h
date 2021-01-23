@@ -2310,6 +2310,7 @@ public:
                         return false;
                   }
             }
+	    if(base == "PSU") return true;
             cerr<<"Error.... "<<base<<" is not a valid basename in syscon .name files... Please contact developpers\n";
             exit(1);
             return false;
@@ -2400,6 +2401,7 @@ public:
             assert(StackOfResidue.isEmpty());
             //int count = 0;
             std::getline(rna_file,line);
+	    line[16] = ' ';
             sscanf(line.c_str(),"%s%d%s%s%d%lf%lf%lf%lf",tag,&atom_serial,atom_type,
                    residue_name,&residue_no,&x,&y,&z,&occupancy);
             OvlpAtomType atomtype = get_atom_base_type(atom_type);
@@ -2422,6 +2424,7 @@ public:
                         }
 
                         std::getline(rna_file,line);
+			line[16] = ' ';
                         sscanf(line.c_str(),"%s%d%s%s%d%lf%lf%lf%lf",tag,&atom_serial,atom_type,
                                residue_name,&residue_no,&x,&y,&z,&occupancy);
                         atomtype = get_atom_base_type(atom_type);
