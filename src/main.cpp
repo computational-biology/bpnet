@@ -569,6 +569,7 @@ int main(int argc, char* argv[]) {
     OvlpSurfaceDataFile * surfgen = NULL;
     OvlpAllSurfacePoints * all_surf_points = NULL;
     OvlpRNA_NucVatiants *nucVariants = NULL;
+    OvlpRNA_NucVatiants *nucVariants_prox =  new OvlpRNA_NucVatiants();
     
     if(argc == 1){
         show_help();
@@ -745,9 +746,13 @@ int main(int argc, char* argv[]) {
 				angvalparam, chparam, sgparam, 
 				corparam );
 	      }
+
 	      if(syspar.overlap_flag == 0){
 		    compute_base_pair_components(accn, fp, &syspar, &ntvariants);
 	      }else{
+		    cout<<"        CONTACT COMPUTATION STARTS"<<endl;
+		    int resinum; 
+		    ovlp_residue_all_prox_comp(syspar.file_dir+syspar.accn, 4.0, nucVariants_prox, &resinum);
 		    string rob_file_path = syspar.file_dir+syspar.accn+".rob";
 		    cout<<"        OVERLAP COMPUTATION STARTS"<<endl;
                     ovlp_base_overlap_comp(syspar.file_dir+syspar.accn, syspar.wt_overlap_cutoff,
@@ -759,6 +764,7 @@ int main(int argc, char* argv[]) {
 		    //call_overlap(rob_file_path); 
 		    syspar.is_overlap = "TRUE";
 		    compute_base_pair_components(accn, fp, &syspar, &ntvariants);
+		    overlap_gen_contact_map(resinum, syspar.file_dir, syspar.accn);
 
 	      }
 

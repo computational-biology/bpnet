@@ -3,6 +3,7 @@
 
 #include <iostream>
 //#include <iomanip>
+#include <stdio.h>
 #include <fstream>
 #include <math.h>
 #include <assert.h>
@@ -10,6 +11,7 @@
 #include <cstdlib>
 #include <cstdio>
 #include <sstream>
+
 
 //#include <set>
 #include <iterator>
@@ -35,6 +37,51 @@
 using namespace std;
 using std::showpoint;
 
+void gen_varna_applet(string dirname, string accn, int** matrix, int numres);
+double dist3d(double x1, double y1, double z1, double x2, double y2, double z2){
+      return sqrt ( (x1-x2) * (x1-x2) + (y1-y2) * (y1-y2) + (z1-z2) * (z1-z2) );
+}
+
+double distsqr3d(double x1, double y1, double z1, double x2, double y2, double z2){
+      return ( (x1-x2) * (x1-x2) + (y1-y2) * (y1-y2) + (z1-z2) * (z1-z2) );
+}
+
+void addpoint3d(double* x1, double* y1, double* z1, 
+	    const double x2, const double y2, const double z2){
+      *x1 += *x1 + x2;
+      *y1 += *y1 + y2;
+      *z1 += *z1 + z2;
+}
+
+void getplane3d(double* A, double* B, double* C, double* D,
+	    double x1, double y1, double z1,
+	    double x2, double y2, double z2,
+	    double x3, double y3, double z3
+	    ){
+      double yz = ((y2-y1)*(z3-z1)) - ((y3-y1)*(z2-z1));
+      double xz = ((x2-x1)*(z3-z1)) - ((x3-x1)*(z2-z1));
+      double xy = ((x2-x1)*(y3-y1)) - ((x3-x1)*(y2-y1));
+      *A = yz;
+      *B = -xz;
+      *C = xy;
+      *D = (-x1)*yz - (-y1)*xz + (-z1)*xy;
+}
+
+double plane_perpdist(const double A, const double B, const double C, const double D,
+	    const double x1, const double y1, const double z1){
+      double denominator = sqrt(A*A + B*B + C*C);
+      double dist = (A * x1 + B * y1 + C * z1 + D)/ denominator;
+      return fabs(dist);
+}
+
+double plane_plane_angledeg(double A1, double B1, double C1, double D1,
+	    double A2, double B2, double C2, double D2){
+      double deno1 =  sqrt(A1*A1 + B1*B1 + C1*C1);
+      double deno2 =  sqrt(A2*A2 + B2*B2 + C2*C2);
+      double cos_alpha = (A1 * A2 + B1 * B2 + C1 * C2) / (deno1 * deno2);
+      double alpha     =(180.0 * acos(cos_alpha))/PI;
+      return alpha;
+}
 
 
 
@@ -459,6 +506,7 @@ public:
 };
 
 class OvlpOutFileRowArray {
+      public:
       OvlpOutFileRow ** mOutFileRowArray;
       int mNumRows;
 public:
@@ -960,6 +1008,14 @@ public:
       void print(){
             cout<<"ATOM "<<serial<<endl;
       }
+      OverlapAtom(int serial, std::string atom_name, double x, double y, double z ): OvlpSphere(x, y, z, (double)0.0){
+	    /* This constructor has been developed on January 2021 for all base proximity
+	     * detection. The idea has been introduced by Bhananjay Bhattacharyya
+	     * from one of the paper of Sudip Kundu. "BMC Bioinformatics 2012, 13:142"
+	     */
+            this->serial        = serial;
+            this->atom_name = atom_name;
+      }
       OverlapAtom(int serial, OvlpAtomVariant type, std::string atom_name, double x, double y, double z, double r, double occupancy, double temp_factor, OvlpAtomSurfPoints * surf_pts): OvlpSphere(x,y,z,r){
             this->serial        = serial;
             this->type          = type;
@@ -1359,10 +1415,52 @@ private:
       int total_points;
       int actual_surface_points;
 
+      OverlapAtom* c1_p;
+      OverlapAtom* c2;
+      OverlapAtom* c5;
+public:
+      double PlaneA;
+      double PlaneB;
+      double PlaneC;
+      double PlaneD;
+
       OvlpPoint3D* center_of_mass;
 
       //bool AtomArrayPopulated = false; // this is because AtomArray is not populated from constructor. So, every newly added function should check whether this is true before moving further.
 public:
+      bool is_in_proximity(OverlapResidueClass* res2, double dist, char* atom1, char* atom2, double* actdist){
+	    if(AtomArray[0]->dist_sqr(res2->AtomArray[0])> 30.0*30.0){
+		  atom1[0] = '\0';
+		  atom2[0] = '\0';
+		  return false;
+	    }
+	    double distsqr = dist*dist;
+	    double dst=0.0;
+	    double mindst = 999999.0;
+	    int mini;
+	    int minj;
+	    *actdist = -999.0;
+	    for(int i=0; i<num_atom; ++i){
+		  for(int j=0; j<res2->num_atom; ++j){
+			dst = AtomArray[i]->dist_sqr(res2->AtomArray[j]);
+			if(dst < mindst){
+			      mindst = dst;
+			      mini = i;
+			      minj = j;
+			}
+		  }
+	    }
+	    if(mindst < distsqr){
+		  *actdist = sqrt(mindst);
+		  strcpy(atom1, AtomArray[mini]->get_atom_name().c_str());
+		  strcpy(atom2, res2->AtomArray[minj]->get_atom_name().c_str());
+		  return true;
+	    }else{
+		  atom1[0] = '\0';
+		  atom2[0] = '\0';
+		  return false;
+	    }
+      }
       ~OverlapResidueClass(){
             for(int i=0; i<num_atom; ++i){
                   delete AtomArray[i];
@@ -1430,6 +1528,9 @@ public:
             this->nucleobase    = nucleo_base;
             this->num_atom      = AtomStack->get_no_elements();
             this->AtomArray     = new OverlapAtom *[num_atom];
+	    c1_p = NULL;
+	    c2 = NULL;
+	    c5 = NULL; 
             double x_min        =  9999999.0;
             double x_max        = -9999999.0;
             double y_min        =  9999999.0;
@@ -1442,6 +1543,13 @@ public:
 
             for(int i=num_atom-1;i>=0;i--){
                   AtomArray[i] = AtomStack->pop();
+		  if(AtomArray[i]->get_atom_name() == "C6"){
+			c1_p = AtomArray[i];
+		  }else if(AtomArray[i]->get_atom_name() == "C2"){
+			c2 = AtomArray[i];
+		  }else if(AtomArray[i]->get_atom_name() == "C5"){
+			c5 = AtomArray[i];
+		  }
                   if(AtomArray[i]->getX()<x_min) x_min = AtomArray[i]->getX();
                   if(AtomArray[i]->getX()>x_max) x_max = AtomArray[i]->getX();
 
@@ -1452,6 +1560,20 @@ public:
                   if(AtomArray[i]->getZ()>z_max) z_max = AtomArray[i]->getZ();
             }
             this->center_of_mass = new OvlpPoint3D( (x_min+x_max)/2.0,(y_min+y_max)/2.0,(z_min+z_max)/2.0);
+	    if(c1_p == NULL || c2 == NULL || c5 == NULL){
+		  fprintf(stderr, "Error... c1p or c2 or c5 not found inresidue no %d\n", residue_no);
+		  exit(EXIT_FAILURE);
+	    }
+	    getplane3d(&PlaneA, &PlaneB, &PlaneC, &PlaneD, 
+			c1_p->getX(),
+		        c1_p->getY(),
+		        c1_p->getZ(),
+		        c2->getX(),
+		        c2->getY(),
+		        c2->getZ(),
+		        c5->getX(),
+			c5->getY(),
+			c5->getZ());     
       }
 
 /*    OverlapResidueClass(int residue_number, OvlpNitrogenousBase nucleo_base, OverlapStack<OverlapAtom*> *AtomStack){ // This constructor is non-conventional. This is created because atoms are first placed in a stack when created.
@@ -2011,6 +2133,45 @@ class OvlpRNA_All_Residues {
       OvlpOutFileRowArray * mOutArray;
 
 public:
+      int get_numres(){
+	    return num_residues;
+      }
+      void compute_all_residue_proximity(char* prox_file, double dist){
+
+	    OverlapResidueClass* resiptr1;
+	    OverlapResidueClass* resiptr2;
+	    char atom1[10];
+	    char atom2[10];
+	    double actdist;
+	    FILE* fp = fopen(prox_file, "w");
+	    if(fp == NULL){    /* Exception Handling */ 
+		  fprintf(stderr, "Error in function %s()... Unable to open file. (FILE:%s, LINE:%d)\n",__func__,  __FILE__, __LINE__);
+		  exit(EXIT_FAILURE);
+	    }
+	    for(int i=0; i<num_residues; ++i){
+		  resiptr1 = residue_bases[i];
+		  for(int j=i+1; j<num_residues; ++j){
+			resiptr2 = residue_bases[j];
+			if(resiptr1->is_in_proximity(resiptr2, dist, atom1, atom2, &actdist) == true){
+			      fprintf(fp, "PROX    %6d:%-6d  %6d:%-6d   %3s:%-3s  %3s-%-3s %5s:%-5s PX  : %5.2lf\n",
+					  mOutArray->mOutFileRowArray[i]->get_cor_serial(),
+					  mOutArray->mOutFileRowArray[j]->get_cor_serial(),
+					  mOutArray->mOutFileRowArray[i]->get_pdb_serial(),
+					  mOutArray->mOutFileRowArray[j]->get_pdb_serial(),
+					  mOutArray->mOutFileRowArray[i]->get_base_name().c_str(),
+					  mOutArray->mOutFileRowArray[j]->get_base_name().c_str(),
+					  mOutArray->mOutFileRowArray[i]->get_chain_name().c_str(),
+					  mOutArray->mOutFileRowArray[j]->get_chain_name().c_str(),
+					  atom1,
+					  atom2,
+					  actdist);
+			}
+
+		  }
+
+	    }
+	    fclose(fp);
+      }
       ~OvlpRNA_All_Residues(){
 
             for(int i=0; i<num_residues; ++i){
@@ -2082,26 +2243,55 @@ public:
                               std::string base_name    = row_i->get_pair_name(row_i_cor_serial, row_j_cor_serial);
                               //cout<<"A2\n";
 
-                              if(base_name == "NOT_FOUND"){
+			      if(result > 40.0){
+				    base_name = "EROR";
+			      }else if(base_name == "NOT_FOUND"){
                                     std::string forward_b_name = row_i->get_pair_type(row_i_cor_serial, row_j_cor_serial-1);
                                     std::string previous_b_name = row_i->get_pair_type(row_i_cor_serial, row_j_cor_serial+1);
                                     //cout<<"("<<row_i_cor_serial<<","<<row_j_cor_serial<<") B_NAME"<<previous_b_name<<endl;
                                     if( forward_b_name == "BP" || previous_b_name == "BP"){
-                                          base_name = "BCRS";
+                                          base_name = "CROS";
                                     }else if( forward_b_name == "TP" || previous_b_name == "TP"){
-                                          base_name = "TCRS";
-                                    }else if(row_i->get_chain_name() == row_j->get_chain_name()){
+                                          base_name = "CROS";
+				    }else if( forward_b_name == "BF" || previous_b_name == "BF" ){
+					  base_name = "CROS";
+				    }else if(row_i->get_chain_name() == row_j->get_chain_name()){
                                           int tmpx = row_i->get_cor_serial();
                                           int tmpy = row_j->get_cor_serial();
+					  double angle = plane_plane_angledeg(
+						      residue_bases[i]->PlaneA,
+						      residue_bases[i]->PlaneB,
+						      residue_bases[i]->PlaneC,
+						      residue_bases[i]->PlaneD,
 
+						      residue_bases[j]->PlaneA,
+						      residue_bases[j]->PlaneB,
+						      residue_bases[j]->PlaneC,
+						      residue_bases[j]->PlaneD);
+					  double perp_dist = plane_perpdist(
+						      residue_bases[i]->PlaneA,
+						      residue_bases[i]->PlaneB,
+						      residue_bases[i]->PlaneC,
+						      residue_bases[i]->PlaneD,
+						      residue_bases[j]->center_of_mass->getX(),
+						      residue_bases[j]->center_of_mass->getY(),
+						      residue_bases[j]->center_of_mass->getZ()
+						 );
+						
                                           int val  = (tmpx>tmpy)?tmpx-tmpy:tmpy-tmpx;  // find the absolute difference.
-                                          if(val == 1){
-                                                base_name = "PSTK"; // probably stacking;
-                                          }else{
-                                                base_name = "----";
+                                          if(val == 1 && perp_dist >=2.0 && result >=5.0 && 
+						      (angle >=150.0 || angle <=30.0)){
+                                                base_name = "ASTK"; // probably Adjacent base stacking;
+                                          }else if(val == 1){
+						base_name = "ADJA";
+					  }else if(val > 1 && perp_dist >=2.0 && result >=10.0 && 
+						      (angle >=160.0 || angle <=20.0)){
+						      base_name = "OSTK";
+					  }else{
+                                                base_name = "CLOS";
                                           }
                                     }else{
-                                          base_name = "----";
+                                          base_name = "CLOS";
                                     }
                               }
 
@@ -2188,9 +2378,11 @@ public:
             fprintf(file,"COLINFO   (59-62)            Base pair name.\n");
             fprintf(file,"COLINFO   (65-66)            Base pair type. if -- then no type detected.\n");
             fprintf(file,"COLINFO   (74-78)            Overlap Value.\n");
-            fprintf(file,"ABVR      PSTK means probably Stacking.\n");
-            fprintf(file,"ABVR      BCRS means Probably Cross overlap between BP and the opposite Diagonal.\n");
-            fprintf(file,"ABVR      TCRS means Probably Cross overlap between TP and the opposite Diagonal.\n");
+            fprintf(file,"ABVR      ASTK means Adjacent Stacking.\n");
+            fprintf(file,"ABVR      OSTK means Non-Adjacent Stacking.\n");
+            fprintf(file,"ABVR      ADJA means Adjacent contact but not proper stacking.\n");
+            fprintf(file,"ABVR      CROS means Cross overlap between BP and the opposite Diagonal.\n");
+            fprintf(file,"ABVR      CLOS means Otherwise overlap between any two bases.\n");
             fprintf(file,"NUMROW    %6d\n",file_stack->get_no_elements());
             OverlapStack<OvlpFileData *> ReverseStack = OverlapStack<OvlpFileData *>(this->file_stack->get_no_elements());
             while(this->file_stack->isEmpty() != true){
@@ -2362,9 +2554,73 @@ public:
             //cout << rna_fbase<<endl<<ext<<endl;
       }
 
+      OvlpRNA_All_Residues *  get_RNA_for_all_contacts(std::string out_filename){
+	    /* This function has been developed on January 2021 for all base proximity
+	     * detection. The idea has been introduced by Bhananjay Bhattacharyya
+	     * from one of the paper of Sudip Kundu. "BMC Bioinformatics 2012, 13:142"
+	     */
+
+            rna_file.open(this->rnafile_name.c_str(),std::ios_base::in);
+            if(rna_file.is_open() == false){
+                  cerr<<"Error... unable to open file named "<<rnafile_name<<endl;
+                  exit(1);
+            }
+            std::string line;
+            int curr_residue_no;
+            char curr_residue_name[5];
+
+
+            char tag[10];
+            int atom_serial;
+            char atom_type[10];
+            char residue_name[5];
+            int residue_no;
+            double x;
+            double y;
+            double z;
+            double occupancy;
+
+            std::string ter = "END";
+
+
+            // This type of OverlapStack declarations are strictly against parallel programming. This is done for speeding up the sequential processing.
+            OverlapStack<OvlpPolymerChain *> StackOfPolymerChain = OverlapStack<OvlpPolymerChain *>(1000);
+            OverlapStack<OverlapResidueClass *> StackOfResidue      = OverlapStack<OverlapResidueClass *>(500000);
+            OverlapStack<OverlapAtom *>         StackOfAtom         = OverlapStack<OverlapAtom *>(200);
+
+            setup_init_values(&curr_residue_no,curr_residue_name);  // Values have been setup through function call is just because to avoid clumsyness in code and for better readability.
+            assert(StackOfResidue.isEmpty());
+            std::getline(rna_file,line);
+	    line[16] = ' ';
+            sscanf(line.c_str(),"%s%d%s%s%d%lf%lf%lf%lf",tag,&atom_serial,atom_type,
+                   residue_name,&residue_no,&x,&y,&z,&occupancy);
+	    while(line != ter){
+		  assert(StackOfAtom.isEmpty());
+		  while(curr_residue_no == residue_no){
+			OverlapAtom * atom = new OverlapAtom(atom_serial, atom_type,x,y,z);
+			StackOfAtom.push(atom);
+			std::getline(rna_file,line);
+			line[16] = ' ';
+			sscanf(line.c_str(),"%s%d%s%s%d%lf%lf%lf%lf",tag,&atom_serial,atom_type,
+				    residue_name,&residue_no,&x,&y,&z,&occupancy);
+			if(line == ter){
+			      residue_no = -1;
+			      break;
+			}
+		  }
+		  OverlapResidueClass * residue = new OverlapResidueClass(curr_residue_no,curr_residue_name,&StackOfAtom);
+		  StackOfResidue.push(residue);
+		  curr_residue_no   = residue_no;
+		  strcpy(curr_residue_name , residue_name);
+	    }
+	    OvlpRNA_All_Residues * rna_all_residues = new OvlpRNA_All_Residues(&StackOfResidue,out_filename);
+	    return rna_all_residues;
+
+      }
+
+
 
       OvlpRNA_All_Residues * get_rna_data_structures(OvlpAllSurfacePoints * all_surf,std::string out_filename){
-            //all_surf->display();
             rna_file.open(this->rnafile_name.c_str(),std::ios_base::in);
             if(rna_file.is_open() == false){
                   cerr<<"Error... unable to open file named "<<rnafile_name<<endl;
@@ -2631,7 +2887,26 @@ void test(){
 }
 
 
+void ovlp_residue_all_prox_comp(string pdb_accn, double dist, OvlpRNA_NucVatiants * nucVariants, int* resinum){
+      std::string cor_file = pdb_accn+".cor";
+      std::string out_file = pdb_accn+".out";
 
+
+      //OvlpSurfaceDataFile * surfgen = new OvlpSurfaceDataFile("./syscon/surface.xyz",base_type,3);
+      //OvlpAllSurfacePoints * all_surf_points = surfgen->generate_surface_points(3);
+      //OvlpRNA_NucVatiants *nucVariants = new OvlpRNA_NucVatiants();
+      nucVariants->set_rna(cor_file);
+      OvlpRNA_All_Residues * rna = nucVariants->get_RNA_for_all_contacts(out_file);
+      
+      char  proxfile[1024];
+      string fullpath = pdb_accn + ".prox";
+     strcpy(proxfile, fullpath.c_str());
+      rna->compute_all_residue_proximity(proxfile, dist);
+      *resinum = rna->get_numres();
+      delete rna;
+      //delete all_surf_points;
+      //delete surfgen;
+}
 void ovlp_base_overlap_comp(string pdb_accn, double ovlp_cutoff,
                             OvlpSurfaceDataFile * surfgen,
                             OvlpAllSurfacePoints * all_surf_points,
@@ -2766,6 +3041,319 @@ int main1(int argc, char* argv[]){
 
 
       return(0);
+}
+
+void gen_all_contact_bpseq(string dirname, string accn, int** matrix, int numres){
+      std::string pdb_accn = dirname+accn;
+      std::string bpseqfile = pdb_accn+".bpseq";
+      std::string bpseq_cmapfile = pdb_accn+"_cmap"+".bpseq";
+
+      int maxdeg = -999;
+      int deg = 0;
+      for(int i=0; i<numres; ++i){
+	    deg = 0;
+	    for(int j=0; j<numres; ++j){
+		  if(matrix[i][j] > 0){
+			deg ++;
+		  }
+	    }
+	    if(deg > maxdeg){
+		  maxdeg = deg;
+	    }
+      }
+
+      FILE* bpseqfp = fopen(bpseqfile.c_str(), "r");
+      if(bpseqfp == NULL){    /* Exception Handling */ 
+	    fprintf(stderr, "Error in function %s() in %s at line %d... Unable to open file.\n", __func__, __FILE__, __LINE__);
+	    exit(EXIT_FAILURE);
+      }
+
+      FILE* bpseq_cmapfp = fopen(bpseq_cmapfile.c_str(), "w");
+      if(bpseq_cmapfp == NULL){    /* Exception Handling */ 
+	    fprintf(stderr, "Error in function %s() in %s at line %d... Unable to open file.\n", __func__, __FILE__, __LINE__);
+	    exit(EXIT_FAILURE);
+      }
+      char line[256];
+      char sep[] = "\t \n";
+      char *token;
+      int frmres;
+      int tores;
+      int othres;
+      fgets(line, 256, bpseqfp); // The first line;
+
+      fprintf(bpseq_cmapfp,"%s", line);
+      for(int i=0; i<numres; ++i){
+	    fgets(line, 256, bpseqfp);
+	    token = strtok(line, sep);
+	    frmres = atoi(token);
+	    fprintf(bpseq_cmapfp,"%6d ", frmres);
+
+	    token = strtok(NULL, sep);
+	    fprintf(bpseq_cmapfp,"%s", token);
+
+
+	    token = strtok(NULL, sep);
+	    tores = atoi(token);
+	    fprintf(bpseq_cmapfp,"%6d", tores);
+
+
+	    token = strtok(NULL, sep);
+	    othres = atoi(token);
+	    fprintf(bpseq_cmapfp,"%6d", othres);
+
+	    int degval = maxdeg - 2 ;  // two already added from bpseq
+	    int matval;
+	    for(int j=0; j< numres; ++j){
+		  matval = matrix[i][j];
+		  if(matval >=4){ // matval is 4,5,6,7 i.e. bp, TP, CLOS or Others exludeig ADJA, CROS etc
+			fprintf(bpseq_cmapfp,"%6d", j+1);
+			degval --;
+		  }
+	    }
+	    for(int k=degval; k>0; --k){ // Print the remaining as zero
+			fprintf(bpseq_cmapfp,"%6d", 0);
+	    }
+	    fprintf(bpseq_cmapfp,"\n");
+      }
+      fclose(bpseqfp);
+      fclose(bpseq_cmapfp);
+}
+
+
+void overlap_gen_contact_map(int numres, string dirname, string accn){
+      std::string pdb_accn = dirname+accn;
+      std::string robfile = pdb_accn+".rob";
+      std::string proxfile = pdb_accn+".prox";
+      std::string gpfile = pdb_accn+".gp";
+      std::string cmapfile = pdb_accn+".cmap";  //contact map
+      
+      FILE* proxfp = fopen(proxfile.c_str(), "r");
+      if(proxfp == NULL){    /* Exception Handling */ 
+	    fprintf(stderr, "Error in function %s() in %s at line %d... Unable to open file.\n", __func__, __FILE__, __LINE__);
+	    exit(EXIT_FAILURE);
+      }
+      FILE* robfp = fopen(robfile.c_str(), "r");
+      if(robfp == NULL){    /* Exception Handling */ 
+	    fprintf(stderr, "Error in function %s() in %s at line %d... Unable to open file.\n", __func__, __FILE__, __LINE__);
+	    exit(EXIT_FAILURE);
+      }
+//      FILE* cmapfp = fopen(cmapfile, "w");
+//      if(cmapfp == NULL){    /* Exception Handling */ 
+//	    fprintf(stderr, "Error in function %s() in %s at line %d... Unable to open file.\n", __func__, __FILE__, __LINE__);
+//	    exit(EXIT_FAILURE);
+//      }
+
+      int** mat = (int**) malloc(numres*sizeof(int*));
+
+      for(int i=0; i<numres; ++i){
+	    mat[i] = (int*) malloc(numres*sizeof(int));
+      }
+      for(int i=0; i<numres; ++i){
+	    for(int j=0; j<numres; ++j){
+		  mat[i][j] = 0;
+	    }
+      }
+      char lineprx[1024];
+      char linerob[1024];
+      //int numproxrow = 2000;
+      char  sep[] = "\t \n";
+      char * robtoken;
+      char * prxtoken;  
+      int row, col;
+      while(fgets(lineprx, 1024, proxfp) != NULL){
+	    prxtoken = strtok(lineprx, sep);
+	    if(strcmp(prxtoken, "PROX") != 0 ) continue;
+	    prxtoken = strtok(NULL, "\t :\n");
+            row = atoi(prxtoken);
+	    row --;
+	    prxtoken = strtok(NULL, "\t :\n");
+            col = atoi(prxtoken);
+	    col --;
+	    prxtoken = strtok(NULL, sep);
+	    prxtoken = strtok(NULL, sep);
+	    prxtoken = strtok(NULL, sep);
+
+
+	    prxtoken = strtok(NULL, sep);
+	    if(strcmp(prxtoken,"O3*:P")==0 || strcmp(prxtoken, "P:O3*")==0){
+		  mat[row][col] = 1;
+		  mat[col][row] = 1;
+	    }else{
+		  mat[row][col] = 7;
+		  mat[col][row] = 7;
+	    }
+      }
+      char  basepair[100];
+      char  bpname[100];
+      char  bptype[100];
+      while(fgets(linerob, 1024, robfp) != NULL){
+	    robtoken = strtok(linerob, sep);
+	    if(strcmp(robtoken, "OVLP") != 0 ) continue;
+	    robtoken = strtok(NULL, "\t :\n");
+            row = atoi(robtoken);
+	    row --;
+	    robtoken = strtok(NULL, "\t :\n");
+            col = atoi(robtoken);
+	    col --;
+	    robtoken = strtok(NULL, sep);
+	    robtoken = strtok(NULL, sep);
+	    strcpy(bpname, robtoken);
+	    robtoken = strtok(NULL, sep);
+
+
+	    robtoken = strtok(NULL, sep);
+	    strcpy(basepair, robtoken);
+	    robtoken = strtok(NULL, sep);
+	    strcpy(bptype, robtoken);
+            if(strcmp(basepair,"ADJA")==0){
+		  mat[row][col] = 1;
+		  mat[col][row] = 1;
+	    }else if(strcmp(basepair,"ASTK")==0){
+		  mat[row][col] = 2;
+		  mat[col][row] = 2;
+	    }else if(strcmp(basepair,"CROS")==0){
+		  mat[row][col] = 3;
+		  mat[col][row] = 3;
+	    }else if(strcmp(basepair, "W:WC")==0 && 
+			(strcmp(bpname,"G:C")==0 ||
+			 strcmp(bpname,"C:G")==0 ||
+			 strcmp(bpname,"A:U")==0 ||
+			 strcmp(bpname,"U:A")==0 ||
+			 strcmp(bpname,"G:U")==0 ||
+			 strcmp(bpname,"U:G")==0 
+			 )){
+		  mat[row][col] = 5;
+		  mat[col][row] = 5;
+	    }else if(strcmp(bptype,"BP") ==0 ||
+			strcmp(bptype,"TP")==0||
+			strcmp(bptype,"BF")==0
+			){
+		  mat[row][col] = 4;
+		  mat[col][row] = 4;
+	    }else if(strcmp(basepair,"CLOS")==0){
+		  mat[row][col] = 6;
+		  mat[col][row] = 6;
+	    }else{
+		  mat[row][col] = 7;
+		  mat[col][row] = 7;
+	    }
+      }
+      FILE* gpfp = fopen(gpfile.c_str(), "w");
+      if(gpfp == NULL){    /* Exception Handling */ 
+	    fprintf(stderr, "Error in function %s() in %s at line %d... Unable to open file.\n", __func__, __FILE__, __LINE__);
+	    exit(EXIT_FAILURE);
+      }
+      fprintf(gpfp,"unset key\n");
+      fprintf(gpfp,"set style increment default\n");
+      fprintf(gpfp,"set view map scale 1\n");
+      fprintf(gpfp,"set style data lines\n");
+      fprintf(gpfp,"unset xtics\n");
+      fprintf(gpfp,"unset ytics\n");
+      fprintf(gpfp,"set ztics border in scale 0,0 nomirror norotate  autojustify\n");
+      fprintf(gpfp,"unset cbtics\n");
+      fprintf(gpfp,"set rtics axis in scale 0,0 nomirror norotate  autojustify\n");
+      fprintf(gpfp,"set title \"Contact map distribution. accn:%s\"\n", accn.c_str()); 
+      fprintf(gpfp,"set zrange [ * : * ] noreverse writeback\n");
+      fprintf(gpfp,"set cblabel \"Score\"\n"); 
+      fprintf(gpfp,"set cbrange [ 0.00000 : 7.00000 ] noreverse nowriteback\n");
+      fprintf(gpfp,"set rrange [ * : * ] noreverse writeback\n");
+      fprintf(gpfp,"set palette define (0 \"black\", 0 \"black\", 1 \"yellow\", 1 \"yellow\", 2 \"gold\", 2 \"gold\", 3 \"orange\", 3 \"orange\", 4 \"red\", 4 \"red\", 5 \"blue\", 5 \"blue\", 6 \"green\", 6 \"green\", 7 \"white\", 7 \"white\")\n");
+      fprintf(gpfp,"set term postscript\n");
+      fprintf(gpfp,"set output \"%s.ps\"\n", accn.c_str());
+
+      fprintf(gpfp, "$mapdata << EOD\n");
+      for(int i=0; i<numres; ++i){
+	    fprintf(gpfp," ,%d", i+1);
+      }
+      fprintf(gpfp,"\n");
+      for(int i=0; i<numres; ++i){
+	    fprintf(gpfp,"%d ", i+1);
+	    for(int j=0; j<numres; ++j){
+		  fprintf(gpfp," ,%d ",mat[i][j]);
+	    }
+	    fprintf(gpfp,"\n");
+      }
+      fprintf(gpfp, "EOD\n");
+
+      fprintf(gpfp,"set datafile separator comma\n");
+      fprintf(gpfp,"plot '$mapdata' matrix rowheaders columnheaders using 1:2:3 with image\n");
+      fprintf(gpfp,"set datafile separator\n");
+
+      fclose(gpfp);
+      fclose(proxfp);
+      fclose(robfp);
+
+
+      gen_all_contact_bpseq(dirname, accn, mat, numres);
+      gen_varna_applet(dirname, accn, mat, numres);
+
+
+      for(int i=0; i<numres; ++i){
+	    free(mat[i]);
+      }
+      free(mat);
+
+
+}
+
+void gen_varna_applet(string dirname, string accn, int** matrix, int numres){
+      std::string pdb_accn = dirname+accn;
+      std::string dbnfile = pdb_accn+".dbn";
+      std::string html_file = pdb_accn+".html";
+      FILE* dbnfp = fopen(dbnfile.c_str(), "r");
+      int dbnsize = numres+200; // With ampersand.
+      char* basestramp = (char*) malloc(dbnsize * sizeof(char)); // with ampersand
+      char* dbnstramp  = (char*) malloc(dbnsize * sizeof(char)); // with ampersand 
+     // char* basestr    = (char*) malloc(numres * sizeof(char));
+      //char* dbnstr     = (char*) malloc(numres * sizeof(char));
+      if(dbnfp == NULL){    /* Exception Handling */ 
+	    fprintf(stderr, "Error in function %s() in %s at line %d... Unable to open file.\n", __func__, __FILE__, __LINE__);
+	    exit(EXIT_FAILURE);
+      }
+      fgets(basestramp, dbnsize, dbnfp); // skip the first line.
+      fgets(basestramp, dbnsize, dbnfp);
+      fgets(dbnstramp, dbnsize, dbnfp);
+      int len = strlen(basestramp);
+      if(basestramp[len-1] != '\n'){    /* Exception Handling */ 
+	    fprintf(stderr, "Error in function %s() in %s at line %d... No newline encountered.\n", __func__, __FILE__, __LINE__);
+	    exit(EXIT_FAILURE);
+      }
+      basestramp[len-1] = '\0';
+      dbnstramp[len-1] = '\0';
+      len --; 
+      FILE* appletfp = fopen(html_file.c_str(),"w");
+      fprintf(appletfp, "<applet  code=\"VARNA.class\"\n");
+      fprintf(appletfp, "codebase=\"/usr/local/bin/\"\n");
+      fprintf(appletfp, "archive=\"VARNAv3-93.jar\"\n");
+      fprintf(appletfp, "width=\"800\" height=\"800\">\n");
+      fprintf(appletfp, "<param name=\"sequenceDBN\"  value=\"%s\" />\n", basestramp);
+      fprintf(appletfp, "<param name=\"structureDBN\" value=\"%s\" />\n", dbnstramp);
+      fprintf(appletfp, "<param name=\"auxBPs\" value=\"\n");
+      for(int i=0; i<numres; ++i){
+	    for(int j=i+1; j<numres; ++j){
+		  if(matrix[i][j] == 4){
+			fprintf(appletfp, "(%d,%d):thickness=1,color=#00FF00;",i+1, j+1);
+		  }else if(matrix[i][j] == 5){
+			;
+			//fprintf(appletfp, "(%d,%d):thickness=1,color=#FF0000;",i+1, j+1);
+		  }else if(matrix[i][j] == 6){
+			fprintf(appletfp, "(%d,%d):thickness=1,color=#FF0000;",i+1, j+1);
+		  }else if(matrix[i][j] == 7){
+			//fprintf(appletfp, "(%d,%d):thickness=1,color=#FF0000;",i+1, j+1);
+			;
+		  }
+	    }
+      }
+      fprintf(appletfp, "\"/>\n");
+
+
+      fprintf(appletfp, "<param name=\"title\" value=\"%s\" />\n", accn.c_str());
+      fprintf(appletfp, "</applet>\n");
+
+      free(basestramp);
+      free(dbnstramp);
+      fclose(dbnfp);
+      fclose(appletfp);
 }
 
 #endif//OVERLAPLIB_OVERLAP_C
