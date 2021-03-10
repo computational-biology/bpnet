@@ -2425,13 +2425,13 @@ class OvlpRNA_NucVatiants {
 
 
       void setup_init_values(int* curr_res_no, char curr_residue_name[]){
-            //cout<<"Test11234\n";
             std::string line;
             long int start = 0;
             while(true){
                   std::getline(rna_file, line);
                   //cout<<"FIRST SEM "<<line<<endl;
                   if(line.substr(0,4) == "ATOM"){
+                  //cout<<"get FIRST SEM "<<line<<endl;
                         long int curr_len = line.length();
                         start = rna_file.tellg() - curr_len - 1L;
                         rna_file.seekg(start,ios_base::beg);
@@ -2559,7 +2559,6 @@ public:
 	     * detection. The idea has been introduced by Bhananjay Bhattacharyya
 	     * from one of the paper of Sudip Kundu. "BMC Bioinformatics 2012, 13:142"
 	     */
-
             rna_file.open(this->rnafile_name.c_str(),std::ios_base::in);
             if(rna_file.is_open() == false){
                   cerr<<"Error... unable to open file named "<<rnafile_name<<endl;
@@ -2614,6 +2613,8 @@ public:
 		  strcpy(curr_residue_name , residue_name);
 	    }
 	    OvlpRNA_All_Residues * rna_all_residues = new OvlpRNA_All_Residues(&StackOfResidue,out_filename);
+
+	    rna_file.close();
 	    return rna_all_residues;
 
       }
@@ -2706,6 +2707,7 @@ public:
             }
             //cout<<"STK OF RES "<<StackOfResidue.get_no_elements()<<endl;
             OvlpRNA_All_Residues * rna_all_residues = new OvlpRNA_All_Residues(&StackOfResidue,out_filename);
+	    rna_file.close();
             return rna_all_residues;
 
 
@@ -2782,7 +2784,7 @@ class OvlpBasePairNupFile {
             file>>curr_residue_name;
             file>>*curr_res_no;
             file.seekg(0, ios_base::beg);
-            //printf("%s  %d\n",curr_residue_name,*curr_res_no);
+            printf("%s  %d\n",curr_residue_name,*curr_res_no);
       }
 public:
       OvlpBasePairNupFile(std::string nupfile){
@@ -2897,6 +2899,7 @@ void ovlp_residue_all_prox_comp(string pdb_accn, double dist, OvlpRNA_NucVatiant
       //OvlpRNA_NucVatiants *nucVariants = new OvlpRNA_NucVatiants();
       nucVariants->set_rna(cor_file);
       OvlpRNA_All_Residues * rna = nucVariants->get_RNA_for_all_contacts(out_file);
+
       
       char  proxfile[1024];
       string fullpath = pdb_accn + ".prox";

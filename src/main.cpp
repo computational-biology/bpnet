@@ -714,7 +714,7 @@ int main(int argc, char* argv[]) {
         syspar.file_dir = file.substr(0, pos_sep + 1);
         
         cout<<"STARTS ACCN: "<<accn<<endl;
-        if(ext == "out"){
+        /*if(ext == "out"){
 	      string file_path = syspar.file_dir+syspar.accn+".out";
 	      FILE* fp = fopen(file_path.c_str(),"r");
 	      if(fp == NULL){     
@@ -732,7 +732,8 @@ int main(int argc, char* argv[]) {
 	      fclose(fp);
             compute_base_pair_components(accn, fp, &syspar, &ntvariants);
         }
-        else if(ext == "cif" || ext == "pdb"){
+        else */ 
+	if(ext == "cif" || ext == "pdb"){
 	      strcpy(accnparam,file.c_str());
 	      /*if(syspar.overlap_flag == 0){
 		    strcpy(corparam,"-NOCOR");
@@ -746,6 +747,19 @@ int main(int argc, char* argv[]) {
 				angvalparam, chparam, sgparam, 
 				corparam );
 	      }
+
+	      string file_path = syspar.file_dir+syspar.accn+".out";
+
+	      int ressize = get_cleaned_residue_size(file_path);
+	      if(ressize == 0){
+		    cout<<"\n        !!!!!!        NO NUCLEIC ACID FOUND FOR THIS STRUCTURE\n"<<endl;
+		    cout<<"ENDS ACCN: "<<syspar.accn<<endl;
+		    cout<<"----------------------------------------------"<<endl<<endl;
+		    continue;
+	      }
+
+
+
 
 	      if(syspar.overlap_flag == 0){
 		    compute_base_pair_components(accn, fp, &syspar, &ntvariants);
