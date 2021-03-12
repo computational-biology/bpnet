@@ -3552,7 +3552,7 @@ c     1   BASE2(I),BPAIR(I)
            READ(line,15)IRES1(I),npdbres(i),BS1,IRES2(I),
      1   BS2,BPAIR(I),ires3
 14    format(a80)
-15    FORMAT(I6,i8,t16,A3,7X,I6,t39,A3,t50,A5,t62,i6)
+15    FORMAT(I6,i8,t16,A3,7X,I6,t39,A3,t50,A5,t63,i6)
         call renbase(bs1,base1(i))
         call renbase(bs2,base2(i))
 c           write(6,15) ires1(i),(i),base1(i),ires2(i),base2(i),
