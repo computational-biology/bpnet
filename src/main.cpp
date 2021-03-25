@@ -392,7 +392,7 @@ void populate_edges(Graph* g, vector<vector<string> >& out_file_tokens, ntvarian
     }
 }
 void compute_base_pair_components(string accn, FILE* outputfile,
-                                  sysparams* syspar, ntvariants_t* ntvar){
+                                  sysparams* syspar, ntvariants_t* ntvar, ovlp_stat* stat){
     int num_cleaned_res = get_cleaned_residue_size(syspar->file_dir+accn+".out");
     if( syspar->res_from_size > num_cleaned_res || syspar->res_to_size < num_cleaned_res) return;
     cout<<"        NUMBER OF VERTERX IS: "<<num_cleaned_res<<endl;
@@ -402,7 +402,7 @@ void compute_base_pair_components(string accn, FILE* outputfile,
     //runbpfind((char*)file_name.c_str(), 1); // 1 for cif 0 for pdb
     //    cout<<"        PAIRCOMPUTATION ENDS SUCCESSFULLY"<<endl;
     //}
-    cout<<"        GRAPH GENERATION FROM PAIR OUT FILE STARTS"<<endl;
+    cout<<"        GRAPH GENERATION FROM BASE-PAIR FILE STARTS"<<endl;
     vector<vector<string> > out_file_tokens;
     vector<vector<string> > out_file_tokens_for_rob;
     if(syspar->is_overlap == "TRUE"){
@@ -450,17 +450,75 @@ void compute_base_pair_components(string accn, FILE* outputfile,
     cout<<"        FILE WRITING PROCESS STARTS"<<endl;
 
     string adj_file_name = syspar->file_dir+accn+".adj";
+   /*if(syspar->overlap_flag == 1){
+	 adj_file_name= syspar->file_dir+accn+"_ol.adj";
+   }else{
+	 adj_file_name= syspar->file_dir+accn+"_bp.adj";
+   }*/
     FILE* adj_file;
     string pymol_file = syspar->file_dir+accn+".pml";
     if(syspar->adj_file == "TRUE"){
         adj_file = fopen(adj_file_name.c_str(),"w");
     }
     string edge_file_name = syspar->file_dir+accn+".edge";
+//   if(syspar->overlap_flag == 1){
+//	 edge_file_name= syspar->file_dir+accn+"_ol.edge";
+//   }else{
+//	 edge_file_name= syspar->file_dir+accn+"_bp.edge";
+//   }
     FILE* edge_file = fopen(edge_file_name.c_str(),"w");
+   fprintf(adj_file, "+====================================================================+\n");
+fprintf(adj_file, "+                                                                    +\n");
+fprintf(adj_file, "+                         B P N E T                                  +\n");
+fprintf(adj_file, "+                       VERSION - 1-0-2                              +\n");
+fprintf(adj_file, "+                                                                    +\n");
+fprintf(adj_file, "+             A Software to Compute Multiplate                       +\n");
+fprintf(adj_file, "+            Base-Pair Networsk in Nucleic Acids.                    +\n");
+fprintf(adj_file, "+                                                                    +\n");
+fprintf(adj_file, "+                                                                    +\n");
+fprintf(adj_file, "+             BUG  REPORT: roy.parthajit@gmail.com                   +\n");
+fprintf(adj_file, "+          TECH REPORT: dhananjay.bhattacharyya@saha.ac.in           +\n");
+fprintf(adj_file, "+====================================================================+\n");
+    fprintf(adj_file, "\n\n");
+    fprintf(adj_file, "ABVR    CARD       Cardinality or size of the component.\n");
+    fprintf(adj_file, "ABVR    SL         Serial No of the residue. This will match with _rna.pdb\n");
+    fprintf(adj_file, "ABVR    EDG-TYPE   What type of edge it is.\n");
+    fprintf(adj_file, "ABVR    WT         Weight of the edge. If TYP is OL, then Weight is Overlap, else c1'-c1' dist.\n");
+    fprintf(adj_file, "ABVR    SP         Secondary Position in the chain, C for Coil, H for Helix etc.\n");
+    fprintf(adj_file, "ABVR    TYP        Type of Network. OL for overlap based, BP for base-pair based.\n");
+    fprintf(adj_file, "ABVR    RES        PDB/mmCIF residur number.\n");
+    fprintf(adj_file, "ABVR    CHN        PDB/mmCIF chain number.\n");
+    fprintf(adj_file, "ABVR    BS         Base Name.\n");
+    fprintf(adj_file, "ABVR    MDL        Component Model number. It is the serial number of the first vertex.\n");
+    fprintf(adj_file, "\n---------------------------P A R A M S    O P T E D ---------------------\n");
     if(syspar->adj_file == "TRUE"){
-        fprintf(adj_file,"REMARK QUERY Number of vertex %2d-%2d exists degree %d\n",syspar->_from_size, syspar->_to_size, syspar->_exdeg);
+        fprintf(adj_file,"PARAM   NETSIZE %2d-%2d\n", syspar->_from_size, syspar->_to_size);
+        fprintf(adj_file,"PARAM   DEGREE EXISTS %2d\n", syspar->_exdeg);
+	if(syspar->overlap_flag == 1){
+	      fprintf(adj_file,"PARAM   OVERLAP   REQUESTED\n");
+	}else{
+	      fprintf(adj_file,"PARAM   OVERLAP   NOT REQUESTED\n");
+	}
     }
 
+    fprintf(adj_file, "\n---------------------------S U M M A R Y  R E P O R T ---------------------\n");
+    fprintf(adj_file, "DATE    %s\n", OvlpGen::today().c_str());
+    fprintf(adj_file,"ACCN    %s\n", syspar->accn.c_str());
+    
+    fprintf(adj_file, "TOTAL RESIDUE : %d\n", syspar->cleaned_res);
+    fprintf(adj_file, "TOTAL COMPONENTS FOUND : %d\n", num_components);
+    if(syspar->overlap_flag == TRUE){
+	  fprintf(adj_file, "NO. OF BASE-PAIRS : %d\n", stat->cancnt + stat->noncancnt);
+	  fprintf(adj_file, "NO. OF CANONICAL : %d\n", stat->cancnt);
+	  fprintf(adj_file, "NO. OF NON-CAN   : %d\n", stat->noncancnt);
+	  fprintf(adj_file, "NO. OF BI-FAR    : %d\n", stat->bfcnt);
+	  fprintf(adj_file, "NO. OF ASTK : %d\n", stat->astkcnt);
+	  fprintf(adj_file, "NO. OF OSTK : %d\n", stat->ostkcnt);
+	  fprintf(adj_file, "NO. OF ADJA : %d\n", stat->adjacnt);
+	  fprintf(adj_file, "NO. OF CLOS : %d\n", stat->closcnt);
+	  fprintf(adj_file, "NO. OF CROS : %d\n", stat->croscnt);
+	  fprintf(adj_file, "NO. OF PROX : %d\n", stat->proxcnt);
+    }
     fprintf(edge_file,"REMARK QUERY Number of vertex %2d-%2d exists degree %d\n",syspar->_from_size,
             syspar->_to_size, syspar->_exdeg);
     sequence_t seq;
@@ -472,7 +530,7 @@ void compute_base_pair_components(string accn, FILE* outputfile,
         int comp_size = (int) comp.size();
 
         if(comp_size>=9 && syspar->is_overlap == "FALSE"){
-            cout<<"Nine or more vertex compnent Found: "<<comp_size<<endl;
+            cout<<"Nine or more vertex compnent Found in base-pair network: "<<comp_size<<endl;
             //int x11;
             // cin>>x11;
         }
@@ -602,8 +660,10 @@ int main(int argc, char* argv[]) {
 	else if(arg.substr(0,9) == "-overlap="){
 	      if(arg.substr(9,4) == "true"){
 		    syspar.overlap_flag = 1;
+		    syspar.is_overlap = "TRUE";
 	      }else if(arg.substr(9,5) == "false"){
 		    syspar.overlap_flag = 0;
+		    syspar.is_overlap = "FALSE";
 	      }else{    /* Exception Handling */ 
 		    fprintf(stderr, "Error in flag -overlap, the value will be either true or false\n");
 		    exit(EXIT_FAILURE);
@@ -627,7 +687,7 @@ int main(int argc, char* argv[]) {
 			cerr<<"invalid value supplied to -cifpymol... supply true or false"<<endl;
 			exit(EXIT_FAILURE);
 		}
-	}else if(arg.substr(0,10) == "-corpymol="){
+	}else if(arg.substr(0,10) == "-rnapymol="){
 		if(arg.substr(10,4) == "true"){
 			syspar.corpymol = "TRUE";
 			syspar.cifpymol = "FALSE";
@@ -699,6 +759,7 @@ int main(int argc, char* argv[]) {
       nucVariants = new OvlpRNA_NucVatiants();
     }
     for(int i=0; i<file_count; i++){
+	  int ressize;
         string file = file_array[i];
         int pos_sep = (int)file.find_last_of("/");
         int pos_dot = (int)file.find_last_of(".");
@@ -706,6 +767,9 @@ int main(int argc, char* argv[]) {
             cerr<<"File extension not supplied. Please supply .pdb or .cif, out or .rob file"<<endl;
             exit(1);
         }
+
+	ovlp_stat stat;
+	ovlp_stat_init(&stat);
 
 
         string accn = file.substr(pos_sep + 1, pos_dot - (pos_sep + 1));
@@ -742,15 +806,18 @@ int main(int argc, char* argv[]) {
 		    if(ext == "cif"){
 			  strcpy(cifparam, "-cif");
 		    }
+//		    printf("Starting BPFIND\n"); // bhatta
 		    callbpfindc(cifparam, accnparam, htparam, 
 				hdparam, hdvalparam, angparam, 
 				angvalparam, chparam, sgparam, 
 				corparam );
+//		    printf("Finished BPFIND\n"); // bhatta
 	      }
 
 	      string file_path = syspar.file_dir+syspar.accn+".out";
 
-	      int ressize = get_cleaned_residue_size(file_path);
+	      ressize = get_cleaned_residue_size(file_path);
+	      syspar.cleaned_res = ressize;
 	      if(ressize == 0){
 		    cout<<"\n        !!!!!!        NO NUCLEIC ACID FOUND FOR THIS STRUCTURE\n"<<endl;
 		    cout<<"ENDS ACCN: "<<syspar.accn<<endl;
@@ -762,23 +829,32 @@ int main(int argc, char* argv[]) {
 
 
 	      if(syspar.overlap_flag == 0){
-		    compute_base_pair_components(accn, fp, &syspar, &ntvariants);
+		    compute_base_pair_components(accn, fp, &syspar, &ntvariants, &stat);
 	      }else{
+		    /*syspar.overlap_flag = 0;
+		    syspar.is_overlap = "FALSE";
+		    compute_base_pair_components(accn, fp, &syspar, &ntvariants);
+		    syspar.overlap_flag = 1;
+		    syspar.is_overlap = "TRUE";*/
 		    cout<<"        CONTACT COMPUTATION STARTS"<<endl;
 		    int resinum; 
-		    ovlp_residue_all_prox_comp(syspar.file_dir+syspar.accn, 4.0, nucVariants_prox, &resinum);
 		    string rob_file_path = syspar.file_dir+syspar.accn+".rob";
 		    cout<<"        OVERLAP COMPUTATION STARTS"<<endl;
-                    ovlp_base_overlap_comp(syspar.file_dir+syspar.accn, syspar.wt_overlap_cutoff,
+		    OvlpParameters::pdb_accn = syspar.accn;
+		    OvlpRNA_All_Residues * rna;
+                    rna = ovlp_base_overlap_comp(syspar.file_dir+syspar.accn, syspar.wt_overlap_cutoff,
                     
                             surfgen,
                             all_surf_points,
                             nucVariants) ;
 		    
 		    //call_overlap(rob_file_path); 
-		    syspar.is_overlap = "TRUE";
-		    compute_base_pair_components(accn, fp, &syspar, &ntvariants);
-		    overlap_gen_contact_map(resinum, syspar.file_dir, syspar.accn);
+		    
+		    ovlp_residue_all_prox_comp(syspar.file_dir+syspar.accn, 4.0, nucVariants_prox, &resinum, &stat);
+		    overlap_gen_contact_map(resinum, syspar.file_dir, syspar.accn, &stat, rna);
+		    //rna->gen_dist_map();
+		    compute_base_pair_components(accn, fp, &syspar, &ntvariants, &stat);
+		    delete rna;
 
 	      }
 
@@ -841,6 +917,25 @@ int main(int argc, char* argv[]) {
             exit(1);
         }
     */
+	FILE* summfp = stdout;
+	fprintf(summfp, "---------------------------S U M M A R Y  R E P O R T ---------------------\n");
+	fprintf(summfp, "TOTAL RESIDUE : %d\n", ressize);
+	if(syspar.overlap_flag == TRUE){
+	      fprintf(summfp, "NO. OF BASE-PAIRS : %d\n", stat.cancnt + stat.noncancnt);
+	      fprintf(summfp, "NO. OF CANONICAL : %d\n", stat.cancnt);
+	      fprintf(summfp, "NO. OF NON-CAN   : %d\n", stat.noncancnt);
+	      fprintf(summfp, "NO. OF BI-FAR    : %d\n", stat.bfcnt);
+	      fprintf(summfp, "NO. OF ASTK : %d\n", stat.astkcnt);
+	      fprintf(summfp, "NO. OF OSTK : %d\n", stat.ostkcnt);
+	      fprintf(summfp, "NO. OF ADJA : %d\n", stat.adjacnt);
+	      fprintf(summfp, "NO. OF CLOS : %d\n", stat.closcnt);
+	      fprintf(summfp, "NO. OF CROS : %d\n", stat.croscnt);
+	      fprintf(summfp, "NO. OF PROX : %d\n", stat.proxcnt);
+	}else{
+	      fprintf(summfp, "Overlap not requested");
+
+
+	}
     }
     if(syspar.overlap_flag == 1){
       delete surfgen;

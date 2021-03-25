@@ -418,7 +418,7 @@ public:
 	    FILE* fp = fopen(pymolpml, "w");
 	    assert(fp != NULL);
 	    //fp = stdout;
-	    fprintf(fp,"load %s.cor\n",syspar->accn.c_str());
+	    fprintf(fp,"load %s_rna.pdb\n",syspar->accn.c_str());
 	    for (int i = 0; i < n; ++i) {
 		    vector<int> component = all_components.at(i);
 		    int comp_size = (int) component.size();
@@ -699,53 +699,42 @@ public:
         }
         int count = gcomp.count_cycles();
         if(count >0 && syspar->is_overlap == "FALSE"){
-            cout<<count<<"                  Cycles found!! at GRAPHMDL "<<cor_res_no[0]<<" with component size "
+            cout<<count<<"                  Cycles found!! at COMP "<<cor_res_no[0]<<" with component size "
 																				""<<comp_size<<endl;
         }
 
+	fprintf(file_adj,"\n\n---------------- C O M P O N E N T      I N F O      S T A R T S -----------------\n\n");
         if(mindeg >= syspar->_num_exdeg && count >= syspar->_num_cycles){
             this->valid_comp[component_index] = 'T';
             syspar->_total_count++;
             if(syspar->adj_file == "TRUE"){
 		    char comp_name[10];
 				isompophic_name(comp_adj, comp_deg, comp_size, comp_name);
-                fprintf(file_adj,"GRAPHMDL %s %5d  %5s\n", syspar->accn.c_str(), cor_res_no[0], comp_name);
-                fprintf(file_adj,"CARD %5d\n",comp_size);
+                fprintf(file_adj,"COMP   %s %5d  %5s\n", syspar->accn.c_str(), cor_res_no[0], comp_name);
+                fprintf(file_adj,"CARD   %5d\n",comp_size);
             }
 
-            fprintf(file_edge_list,"GRAPHMDL %s %5d\n", syspar->accn.c_str(), cor_res_no[0]);
+            fprintf(file_edge_list,"COMP   %s %5d\n", syspar->accn.c_str(), cor_res_no[0]);
             if(mindeg>2){
                 if(syspar->adj_file == "TRUE"){
-                    fprintf(file_adj,"META DEGREE %2d COUNT %2d\n",syspar->_exdeg, mindeg);
+                    fprintf(file_adj,"INFO    DEGREE %2d COUNT %2d\n",syspar->_exdeg, mindeg);
                 }
-                fprintf(file_edge_list,"META DEGREE %2d COUNT %2d\n",syspar->_exdeg, mindeg);
+                fprintf(file_edge_list,"INFO   DEGREE %2d COUNT %2d\n",syspar->_exdeg, mindeg);
             }
             if(count>0){
                 if(syspar->adj_file == "TRUE"){
-                    fprintf(file_adj,"META CYCLE %5d\n",count);
+                    fprintf(file_adj,"INFO   CYCLE %5d\n",count);
                 }
-                fprintf(file_edge_list,"META CYCLE %5d\n",count);
+                fprintf(file_edge_list,"INFO   CYCLE %5d\n",count);
             }
             fprintf(file_edge_list,"META CARD %5d\n",comp_size);
-            if(syspar->adj_file == "TRUE"){
-                fprintf(file_adj,"HEAD  TYPE  MDL RES DEG");
-                for(int i=0; i<comp_size; ++i){
-                    fprintf(file_adj, "%6d ", cor_res_no[i]);
-                }
-                fprintf(file_adj,"\n");
-            }
-
+	    fprintf(file_adj, "HEAD    SL    SL  EDG-TYPE      WT  SP  TYP  RES    CHN  RES    CHN  BS  BS\n");
+	    fprintf(file_adj, "        --    --  --------      --  --  ---  ---    ---  ---    ---  --  --\n");
             for(int i=0; i<comp_size; ++i){
-                if(syspar->adj_file == "TRUE") {
-                    fprintf(file_adj, "DATA   %s %5d  ", syspar->type.c_str(), cor_res_no[0]);
-                }
-		if(syspar->adj_file == "TRUE"){
-			fprintf(file_adj, "%c   %1d ",res_class_name[cor_res_no[i] - 1], comp_deg[i]);
-		}
                 for(int j=0; j<comp_size; ++j){
-                    if(syspar->adj_file == "TRUE"){
-                        fprintf(file_adj, "%6d ", comp_adj[i][j]);
-                    }
+//                    if(syspar->adj_file == "TRUE"){
+//                        fprintf(file_adj, "%6d ", comp_adj[i][j]);
+//                    }
                     if(j>=i && comp_adj[i][j] != 0){
                     	char ith_ins[5];
                     	ith_ins[1]= ins_code[cor_res_no[i]-1];
@@ -768,7 +757,7 @@ public:
 						jth_ins[2] = '\0';
 
 
-                        fprintf(file_edge_list, "DATA %5d %5d  %c:%c-%4s %8.2lf %c:%c %s %5d%2s %3s %5d%2s %3s %3s "
+                        fprintf(file_adj, "EDGE %5d %5d  %c:%c-%4s %8.2lf %c:%c %s %5d%2s %3s %5d%2s %3s %3s "
 												"%3s\n",
                                 cor_res_no[i], cor_res_no[j],
                                 res_class_name[cor_res_no[i]-1],
@@ -787,15 +776,39 @@ public:
 								res_act_name[cor_res_no[j] -1]);
                     }
                 }
+//                if(syspar->adj_file == "TRUE"){
+//		    fprintf(file_adj, "\n");
+//                }
+
+            }
+	    fprintf(file_adj,"#\n");
+            if(syspar->adj_file == "TRUE"){
+                fprintf(file_adj,"HEAD  TYPE  MDL RES DEG");
+                for(int i=0; i<comp_size; ++i){
+                    fprintf(file_adj, "%6d ", cor_res_no[i]);
+                }
+                fprintf(file_adj,"\n");
+            }
+            for(int i=0; i<comp_size; ++i){
+                if(syspar->adj_file == "TRUE") {
+                    fprintf(file_adj, "ADJC   %s %5d  ", syspar->type.c_str(), cor_res_no[0]);
+                }
+		if(syspar->adj_file == "TRUE"){
+			fprintf(file_adj, "%c   %1d ",res_class_name[cor_res_no[i] - 1], comp_deg[i]);
+		}
+                for(int j=0; j<comp_size; ++j){
+                    if(syspar->adj_file == "TRUE"){
+                        fprintf(file_adj, "%6d ", comp_adj[i][j]);
+                    }
+		}
                 if(syspar->adj_file == "TRUE"){
 		    fprintf(file_adj, "\n");
                 }
-
-            }
+	    }
             if(syspar->adj_file == "TRUE"){
                 fprintf(file_adj,"#\n");
                 for(int i=0; i<comp_size; ++i){
-                    fprintf(file_adj,"DATW   %s %5d        ", syspar->type.c_str(), cor_res_no[0]);
+                    fprintf(file_adj,"WEGT   %s %5d        ", syspar->type.c_str(), cor_res_no[0]);
                     for(int j=0; j<comp_size; ++j){
                         fprintf(file_adj, "%6.2lf ", adjenergy[cor_res_no[i]-1][cor_res_no[j]-1]);
                     }

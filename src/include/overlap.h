@@ -1414,7 +1414,7 @@ private:
       int total_overlap_points;
       int total_points;
       int actual_surface_points;
-
+public:
       OverlapAtom* c1_p;
       OverlapAtom* c2;
       OverlapAtom* c5;
@@ -2120,7 +2120,34 @@ public:
 };
 
 
+typedef struct{
+      int cancnt;
+      int noncancnt;
+      int bfcnt;
+      int astkcnt;
+      int croscnt;
+      int adjacnt;
+      int ostkcnt;
+      int closcnt;
+      int proxcnt;
+      string chain[120];
+      int    chnmin[120];
+      int    chnmax[120];
+      int chncnt;
+}ovlp_stat;
 
+void ovlp_stat_init(ovlp_stat* self){
+      self->cancnt = 0;
+      self->noncancnt = 0;
+      self->bfcnt = 0;
+      self->astkcnt = 0;
+      self->croscnt = 0;
+      self->adjacnt = 0;
+      self->ostkcnt = 0;
+      self->closcnt = 0;
+      self->proxcnt = 0;
+      self->chncnt = 0;
+}
 
 
 class OvlpRNA_All_Residues {
@@ -2130,30 +2157,118 @@ class OvlpRNA_All_Residues {
       //gsl_spmatrix* adj;
 
       OverlapStack<OvlpFileData *>* file_stack;
+      public:
       OvlpOutFileRowArray * mOutArray;
 
 public:
+      void gen_dist_map(){
+	    FILE* gpfp = fopen("test.gp", "w");
+	    if(gpfp == NULL){    /* Exception Handling */ 
+		  fprintf(stderr, "Error in function %s()... Unable to open file. (FILE:%s, LINE:%d)\n",__func__,  __FILE__, __LINE__);
+		  exit(EXIT_FAILURE);
+	    }
+	    OverlapResidueClass* res1;
+	    OverlapResidueClass* res2;
+	    int dist;
+	    string accn = "abcd.ps";
+	    fprintf(gpfp,"unset key\n");
+	    fprintf(gpfp,"set style increment default\n");
+	    fprintf(gpfp,"set view map scale 1\n");
+	    fprintf(gpfp,"set style data lines\n");
+	    fprintf(gpfp,"unset xtics\n");
+	    fprintf(gpfp,"unset ytics\n");
+	    fprintf(gpfp,"set ztics border in scale 0,0 nomirror norotate  autojustify\n");
+	    fprintf(gpfp,"unset cbtics\n");
+	    fprintf(gpfp,"set rtics axis in scale 0,0 nomirror norotate  autojustify\n");
+	    fprintf(gpfp,"set title \"Contact map distribution. accn:%s\"\n", accn.c_str()); 
+	    fprintf(gpfp,"set zrange [ * : * ] noreverse writeback\n");
+	    //fprintf(gpfp,"set cblabel \"Score\"\n"); 
+//	    fprintf(gpfp,"set cbrange [ 0.0000 : %8.4lf ] noreverse nowriteback\n", (double)(maxcol));
+	    char palette[1024];
+	    strcpy(palette, "set palette define (0 \"#252121\", 1 \"#ff2bd5\", 2 \"#a8a8a8\", 3 \"#ffbc00\", 4 \"red\", 5 \"#0055ff\", 6 \"green\", 7 \"white\"");
+	    //      strcpy(palette, "set palette define (0 \"#000030\", 0 \"black\", 1 \"yellow\", 1 \"yellow\", 2 \"gold\", 2 \"gold\", 3 \"orange\", 3 \"orange\", 4 \"red\", 4 \"red\", 5 \"#ff2bd5\", 5 \"#ff2bd5\", 6 \"green\", 6 \"green\", 7 \"white\", 7 \"white\"");
+	    strcat(palette, ")\n");
+//	    if(addon == 0){
+//		  fprintf(gpfp, "set cbtics nomirror out (\"FAR\" 0.5, \"ADJA\" 1.5, \"ASTK\" 2.5, \"CROS\" 3.5, \"NC-BP\" 4.5,\"C-BP\" 5.5,\"CLOS\" 6.5, \"PROX\" 7.5)\n");
+//	    }else{
+//		  fprintf(gpfp, "set cbtics nomirror out (\"BGCOL\" 0.5, \"ADJA\" 1.5, \"ASTK\" 2.5, \"CROS\" 3.5, \"NC-BP\" 4.5,\"C-BP\" 5.5,\"CLOS\" 6.5, \"PROX\" 7.5, \"CHN\" 8.5)\n");
+//	    }
+
+	    fprintf(gpfp,"set rrange [ * : * ] noreverse writeback\n");
+	    fprintf(gpfp, "%s", palette);
+	    fprintf(gpfp,"set term postscript\n");
+	    fprintf(gpfp,"set output \"%s.ps\"\n", accn.c_str());
+	    fprintf(gpfp, "$mapdata << EOD\n");
+	    for(int i=0; i<num_residues; ++i){
+		  fprintf( gpfp, " ,%d", i+1);
+	    }
+	    fprintf( gpfp, "\n");
+	    for(int i=0; i<num_residues; ++i){
+		  res1 = residue_bases[i];
+		  fprintf(gpfp,"%d ", i+1);
+		  for(int j=0; j<num_residues; ++j){
+			res2 = residue_bases[j];
+			dist = (int)res1->c1_p->dist(res2->c1_p);
+			fprintf(gpfp, ",%d", dist);
+
+
+		  }
+			fprintf(gpfp, "\n");
+	    }
+	    
+			fprintf(gpfp, "EOD\n");
+			fprintf(gpfp,"set datafile separator comma\n");
+			fprintf(gpfp,"plot '$mapdata' matrix rowheaders columnheaders using 1:2:3 with image\n");
+			fprintf(gpfp,"set datafile separator\n");
+
+			fclose(gpfp);
+      }
       int get_numres(){
 	    return num_residues;
       }
-      void compute_all_residue_proximity(char* prox_file, double dist){
+      void compute_all_residue_proximity(char* prox_file, double dist, ovlp_stat* stat){
 
 	    OverlapResidueClass* resiptr1;
 	    OverlapResidueClass* resiptr2;
 	    char atom1[10];
 	    char atom2[10];
 	    double actdist;
-	    FILE* fp = fopen(prox_file, "w");
+	    FILE* fp = fopen(prox_file, "a");
 	    if(fp == NULL){    /* Exception Handling */ 
 		  fprintf(stderr, "Error in function %s()... Unable to open file. (FILE:%s, LINE:%d)\n",__func__,  __FILE__, __LINE__);
 		  exit(EXIT_FAILURE);
 	    }
+	    fprintf(fp,"#\n");
 	    for(int i=0; i<num_residues; ++i){
 		  resiptr1 = residue_bases[i];
-		  for(int j=i+1; j<num_residues; ++j){
+		  std::string chn = mOutArray->mOutFileRowArray[i]->get_chain_name();
+		  int flag =0;
+		  for(int i=0; i<stat->chncnt; ++i){
+			if(chn == stat->chain[i]){
+			      flag = 1;
+			      break;
+			}
+		  }
+		  if(flag == 0){
+			stat->chnmin[stat->chncnt] = i;
+			if(stat->chncnt > 0){
+			      stat->chnmax[stat->chncnt-1] = i-1;
+			}
+			stat->chnmax[stat->chncnt] = i;
+			stat->chain[stat->chncnt] = chn;
+			stat->chncnt ++;
+		  }
+		  if(i+1 == num_residues){
+			stat->chnmax[stat->chncnt-1] = i;
+		  }
+
+		  for(int j=i+2; j<num_residues; ++j){
+			/* As per the suggestion of DB sir on 19-03-2021, started from i+2, 
+			 * because always i and i+1 are covalent and O3*-P bond
+			 * is essential*/
 			resiptr2 = residue_bases[j];
 			if(resiptr1->is_in_proximity(resiptr2, dist, atom1, atom2, &actdist) == true){
-			      fprintf(fp, "PROX    %6d:%-6d  %6d:%-6d   %3s:%-3s  %3s-%-3s %5s:%-5s PX  : %5.2lf\n",
+			      fprintf(fp, "PROX    %6d:%-6d  %6d:%-6d   %3s:%-3s   %3s-%-3s %4s:%-4s PX  :   %5.2lf\n",
 					  mOutArray->mOutFileRowArray[i]->get_cor_serial(),
 					  mOutArray->mOutFileRowArray[j]->get_cor_serial(),
 					  mOutArray->mOutFileRowArray[i]->get_pdb_serial(),
@@ -2171,6 +2286,10 @@ public:
 
 	    }
 	    fclose(fp);
+	    printf("totak chains found: %d\n", stat->chncnt);
+	    for(int i=0; i<stat->chncnt; ++i){
+		  printf("CHN: %s MIN: %4d, MAX:%4d\n", stat->chain[i].c_str(), stat->chnmin[i], stat->chnmax[i]);
+	    }
       }
       ~OvlpRNA_All_Residues(){
 
@@ -2369,10 +2488,10 @@ public:
             fprintf(file,"ACCN      %s\n", OvlpParameters::pdb_accn.c_str());
             fprintf(file,"VERSION   %s (Overlap Version)\n", OvlpParameters::file_version.c_str());
             fprintf(file,"TIME      %s\n", OvlpGen::today().c_str());
-            fprintf(file,"DVLPR     Parthajit Roy, roy.paryhajit@gmail.com\n");
-            fprintf(file,"DVLPR     Dhananjay Bhattacharyya, dhananjay.bhattacharyya@saha.ac.in\n");
-            fprintf(file,"COLINFO   (09-14 : 16-21)    .cor file cor serial\n");
-            fprintf(file,"COLINFO   (24-29 : 31-36)    .pdb file serial\n");
+            fprintf(file,"DVLPR     Dr. Parthajit Roy, roy.paryhajit@gmail.com\n");
+            fprintf(file,"DVLPR     Dr. Dhananjay Bhattacharyya, dhananjay.bhattacharyya@saha.ac.in\n");
+            fprintf(file,"COLINFO   (09-14 : 16-21)    <accn>_rna.pdb file cor serial\n");
+            fprintf(file,"COLINFO   (24-29 : 31-36)    PDB/mmCIF file serial\n");
             fprintf(file,"COLINFO   (40-42 : 44-46)    Nucleobase name:Nucleobase name\n");
             fprintf(file,"COLINFO   (52 : 54)          Chain name:Chain name\n");
             fprintf(file,"COLINFO   (59-62)            Base pair name.\n");
@@ -2523,8 +2642,8 @@ public:
             this->rna_fbase     = rnafile.substr(0, rnafile.find_last_of("."));
 
             this->ext = rnafile.substr(rnafile.find_last_of(".") + 1, rnafile.length());
-            if(strncasecmp(ext.c_str(), "cor",6)) {
-                  cerr<<"Error    ."<<ext<<" file has been supplied insted of .cor file"<<endl;
+            if(strncasecmp(ext.c_str(), "pdb",6)) {
+                  cerr<<"Error    ."<<ext<<" file has been supplied insted of .pdb file"<<endl;
                   exit(1);
             }
             //cout<<"corfile:"<<this->rnafile_name<<endl;
@@ -2889,8 +3008,8 @@ void test(){
 }
 
 
-void ovlp_residue_all_prox_comp(string pdb_accn, double dist, OvlpRNA_NucVatiants * nucVariants, int* resinum){
-      std::string cor_file = pdb_accn+".cor";
+void ovlp_residue_all_prox_comp(string pdb_accn, double dist, OvlpRNA_NucVatiants * nucVariants, int* resinum, ovlp_stat* stat){
+      std::string cor_file = pdb_accn+"_rna.pdb";
       std::string out_file = pdb_accn+".out";
 
 
@@ -2902,28 +3021,27 @@ void ovlp_residue_all_prox_comp(string pdb_accn, double dist, OvlpRNA_NucVatiant
 
       
       char  proxfile[1024];
-      string fullpath = pdb_accn + ".prox";
+      string fullpath = pdb_accn + ".rob";
      strcpy(proxfile, fullpath.c_str());
-      rna->compute_all_residue_proximity(proxfile, dist);
+      rna->compute_all_residue_proximity(proxfile, dist, stat);
       *resinum = rna->get_numres();
       delete rna;
       //delete all_surf_points;
       //delete surfgen;
 }
-void ovlp_base_overlap_comp(string pdb_accn, double ovlp_cutoff,
+OvlpRNA_All_Residues* ovlp_base_overlap_comp(string pdb_accn, double ovlp_cutoff,
                             OvlpSurfaceDataFile * surfgen,
                             OvlpAllSurfacePoints * all_surf_points,
                             OvlpRNA_NucVatiants *nucVariants){
       OvlpParameters::ovlp_cutoff = ovlp_cutoff;
-      std::string cor_file = pdb_accn+".cor";
+      std::string cor_file = pdb_accn+"_rna.pdb";
       std::string out_file = pdb_accn+".out";
-
 
       //OvlpSurfaceDataFile * surfgen = new OvlpSurfaceDataFile("./syscon/surface.xyz",base_type,3);
       //OvlpAllSurfacePoints * all_surf_points = surfgen->generate_surface_points(3);
       //OvlpRNA_NucVatiants *nucVariants = new OvlpRNA_NucVatiants();
       nucVariants->set_rna(cor_file);
-      OvlpRNA_All_Residues * rna = nucVariants->get_rna_data_structures(all_surf_points,out_file);
+      OvlpRNA_All_Residues* rna = nucVariants->get_rna_data_structures(all_surf_points,out_file);
 
       rna->calc_all_surface();
       rna->calc_all_overlap();
@@ -2931,7 +3049,8 @@ void ovlp_base_overlap_comp(string pdb_accn, double ovlp_cutoff,
       FILE* fp = fopen(robfile.c_str(),"w");
       rna->write_overlap_to_file(fp);
       fclose(fp);
-      delete rna;
+      return rna;
+     // delete rna;
       //delete all_surf_points;
       //delete surfgen;
 }
@@ -2967,84 +3086,6 @@ void ovlp_base_pair_overlap_comp(char **argv, double ovlp_cutoff){
 
 
 
-int main1(int argc, char* argv[]){
-
-
-      OvlpParameters::pdb_accn = argv[2];
-      //cout<<"test 1"<<endl;
-      //OvlpNUtil::read_words_from_file("./syscon/adenine_atoms.name");
-
-      //all_surf_points->display();
-
-      //OvlpRNADataFile* f  = new OvlpRNADataFile(argv[1]);
-      //OvlpRNA* rna        = f->get_rna_data_structures(all_surf_points);
-
-
-      //cout<<"Starts working..."<<endl;
-      if(argc == 1){
-            cout<<"Please issue proper command line arguments or run with -h for help."<<endl;
-            //populate_array_from_out_file("1asy.out");
-            exit(1);
-      }
-
-      if(strncasecmp(argv[1], "-ab" , 10) == 0){
-            std::string pdb_accn=argv[2];
-	    cout<<"test1"<<endl;
-            OvlpAtomType base_type[] = {Carbon,Nitrogen,Oxygen};
-            OvlpSurfaceDataFile * surfgen = new OvlpSurfaceDataFile("./syscon/surface.xyz",base_type,3);
-	    cout<<"test2"<<endl;
-            OvlpAllSurfacePoints * all_surf_points = surfgen->generate_surface_points(3);
-	    cout<<"test3"<<endl;
-            OvlpRNA_NucVatiants *nucVariants = new OvlpRNA_NucVatiants();
-	    cout<<"test4"<<endl;
-            ovlp_base_overlap_comp(pdb_accn, 25.0, surfgen, all_surf_points, nucVariants);
-	    cout<<"test5"<<endl;
-            delete all_surf_points;
-            delete surfgen;
-      }/*else if(strncasecmp(argv[1], "-absummary" , 15){
-        std::string pdb_accn=argv[2];
-        base_overlap_comp(pdb_accn,2);
-    }else if(strncasecmp(argv[1], "-abdetail" , 15){
-        std::string pdb_accn=argv[2];
-        ovlp_base_overlap_comp(pdb_accn,3);
-    }*/
-      else if(strncasecmp(argv[1], "-bp" , 10) == 0){
-            ovlp_base_pair_overlap_comp(argv, 20.0);
-      }else if(strncasecmp(argv[1], "--version" , 10) == 0){
-            cout<<"Overlap version "<< OvlpParameters::file_version<<"\n";
-      }else if(strncasecmp(argv[1], "-h" , 10) == 0){
-            cout<<endl<<"-------------------compiling overlap file---------------------"<<endl<<endl;
-            cout<<"g++ overlap.cpp -fopenmp -lgsl -lcblas -lm"<<endl;
-            cout<<"NOTE: openmp, gsl needs to be installed in your ubuntu machine"<<endl<<endl;
-            cout<<"-------------------running base overlap----------------------"<<endl<<endl;
-            cout<<"If you want to compute all base overlaps then do the following"<<endl;
-            cout<<"./a.out -ab  <abc.base> "<<endl;
-            cout<<"The output file will be stored in .rob with the same accession number"<<endl<<endl;
-            cout<<"-------------------running base-pair overlap------------------"<<endl<<endl;
-            cout<<"If you want to compute base pair overlap then do the following"<<endl;
-            cout<<"./a.out -bp  <abc.base>  <abc.nup>"<<endl;
-            cout<<"The output will be stored in .bpo file with same accession number."<<endl<<endl;
-            cout<<"-------------------generation of .base file---------------------"<<endl<<endl;
-            cout<<"for generation of .base file do the following"<<endl;
-            cout<<"gawk -f genbase.awk <abc.cor>"<<endl;
-            cout<<"For cor file generation, run bpfind program... see Saha Institute following detail"<<endl;
-            cout<< "http://www.saha.ac.in/biop/bioinformatics.html"<<endl<<endl;
-            cout<<"---------------------Developpers---------------------------"<<endl<<endl;
-            cout<<"Developper: Parthajit Roy and Dr. D. Bhattacharyya"<<endl<<endl;
-            cout<<"---------------------Reporting Bugs------------------------"<<endl<<endl;
-            cout<<"P. Roy,              e-mail: roy.parthajit@gmail.com or"<<endl;
-            cout<<"D. Bhattacharyya     e-mail: dhananjay.bhattacharyya@saha.ac.in"<<endl<<endl;
-
-      }else{
-            cout<<"Invalid switch "<<argv[1]<<", Please run the program with -h option."<<endl;
-            exit(0);
-      }
-
-
-
-
-      return(0);
-}
 
 void gen_all_contact_bpseq(string dirname, string accn, int** matrix, int numres){
       std::string pdb_accn = dirname+accn;
@@ -3081,7 +3122,7 @@ void gen_all_contact_bpseq(string dirname, string accn, int** matrix, int numres
       char *token;
       int frmres;
       int tores;
-      int othres;
+      //int othres;
       fgets(line, 256, bpseqfp); // The first line;
 
       fprintf(bpseq_cmapfp,"%s", line);
@@ -3090,25 +3131,33 @@ void gen_all_contact_bpseq(string dirname, string accn, int** matrix, int numres
 	    token = strtok(line, sep);
 	    frmres = atoi(token);
 	    fprintf(bpseq_cmapfp,"%6d ", frmres);
-
+	    
 	    token = strtok(NULL, sep);
 	    fprintf(bpseq_cmapfp,"%s", token);
+	    int degval = maxdeg;  
+	    while(  (token = strtok(NULL, sep)) != NULL){
+		  tores = atoi(token);
+		  if(tores != 0){
+			degval --;
+			fprintf(bpseq_cmapfp,"%6d", tores);
+		  }
+	    }
 
 
-	    token = strtok(NULL, sep);
+
+	    /*token = strtok(NULL, sep);
 	    tores = atoi(token);
 	    fprintf(bpseq_cmapfp,"%6d", tores);
 
 
 	    token = strtok(NULL, sep);
 	    othres = atoi(token);
-	    fprintf(bpseq_cmapfp,"%6d", othres);
+	    fprintf(bpseq_cmapfp,"%6d", othres);*/
 
-	    int degval = maxdeg - 2 ;  // two already added from bpseq
 	    int matval;
 	    for(int j=0; j< numres; ++j){
 		  matval = matrix[i][j];
-		  if(matval >=4){ // matval is 4,5,6,7 i.e. bp, TP, CLOS or Others exludeig ADJA, CROS etc
+		  if(matval >=6){ // matval is 4,5,6,7 i.e. bp, TP, CLOS or Others exludeig ADJA, CROS etc
 			fprintf(bpseq_cmapfp,"%6d", j+1);
 			degval --;
 		  }
@@ -3123,20 +3172,16 @@ void gen_all_contact_bpseq(string dirname, string accn, int** matrix, int numres
 }
 
 
-void overlap_gen_contact_map(int numres, string dirname, string accn){
+void overlap_gen_contact_map(int numres, string dirname, string accn, ovlp_stat* stat,
+	    OvlpRNA_All_Residues* rna){
       std::string pdb_accn = dirname+accn;
       std::string robfile = pdb_accn+".rob";
-      std::string proxfile = pdb_accn+".prox";
+      std::string proxfile = pdb_accn+".rob";
       std::string gpfile = pdb_accn+".gp";
       std::string cmapfile = pdb_accn+".cmap";  //contact map
       
       FILE* proxfp = fopen(proxfile.c_str(), "r");
       if(proxfp == NULL){    /* Exception Handling */ 
-	    fprintf(stderr, "Error in function %s() in %s at line %d... Unable to open file.\n", __func__, __FILE__, __LINE__);
-	    exit(EXIT_FAILURE);
-      }
-      FILE* robfp = fopen(robfile.c_str(), "r");
-      if(robfp == NULL){    /* Exception Handling */ 
 	    fprintf(stderr, "Error in function %s() in %s at line %d... Unable to open file.\n", __func__, __FILE__, __LINE__);
 	    exit(EXIT_FAILURE);
       }
@@ -3151,9 +3196,25 @@ void overlap_gen_contact_map(int numres, string dirname, string accn){
       for(int i=0; i<numres; ++i){
 	    mat[i] = (int*) malloc(numres*sizeof(int));
       }
+      int flg =0;
       for(int i=0; i<numres; ++i){
 	    for(int j=0; j<numres; ++j){
 		  mat[i][j] = 0;
+	    }
+      }
+      for(int i=0; i<numres; ++i){
+	    std::string chn = rna->mOutArray->mOutFileRowArray[i]->get_chain_name();
+	    flg = 0;
+	    int k;
+	    for(k=0; k<stat->chncnt; ++k){
+		  if(stat->chain[k] == chn){
+			flg = 1;
+			for(int j=stat->chnmin[k]; j<=stat->chnmax[k]; ++j){
+			      mat[i][j] = 8; // Presently we have seven colors for foreground. 
+			                       // So, start from 8.
+			}
+			break;
+		  }
 	    }
       }
       char lineprx[1024];
@@ -3186,6 +3247,12 @@ void overlap_gen_contact_map(int numres, string dirname, string accn){
 		  mat[col][row] = 7;
 	    }
       }
+      fclose(proxfp);
+      FILE* robfp = fopen(robfile.c_str(), "r");
+      if(robfp == NULL){    /* Exception Handling */ 
+	    fprintf(stderr, "Error in function %s() in %s at line %d... Unable to open file.\n", __func__, __FILE__, __LINE__);
+	    exit(EXIT_FAILURE);
+      }
       char  basepair[100];
       char  bpname[100];
       char  bptype[100];
@@ -3211,12 +3278,15 @@ void overlap_gen_contact_map(int numres, string dirname, string accn){
             if(strcmp(basepair,"ADJA")==0){
 		  mat[row][col] = 1;
 		  mat[col][row] = 1;
+		  stat->adjacnt ++;
 	    }else if(strcmp(basepair,"ASTK")==0){
 		  mat[row][col] = 2;
 		  mat[col][row] = 2;
+		  stat->astkcnt ++;
 	    }else if(strcmp(basepair,"CROS")==0){
 		  mat[row][col] = 3;
 		  mat[col][row] = 3;
+		  stat->croscnt ++;
 	    }else if(strcmp(basepair, "W:WC")==0 && 
 			(strcmp(bpname,"G:C")==0 ||
 			 strcmp(bpname,"C:G")==0 ||
@@ -3227,18 +3297,29 @@ void overlap_gen_contact_map(int numres, string dirname, string accn){
 			 )){
 		  mat[row][col] = 5;
 		  mat[col][row] = 5;
+		  if(strcmp(bptype, "BF") == 0){
+			stat->bfcnt ++;
+		  }
+		  stat->cancnt ++;
 	    }else if(strcmp(bptype,"BP") ==0 ||
 			strcmp(bptype,"TP")==0||
 			strcmp(bptype,"BF")==0
 			){
 		  mat[row][col] = 4;
 		  mat[col][row] = 4;
+		  if(strcmp(bptype, "BF") == 0){
+			stat->bfcnt ++;
+		  }
+		  stat->noncancnt ++;
 	    }else if(strcmp(basepair,"CLOS")==0){
 		  mat[row][col] = 6;
 		  mat[col][row] = 6;
+		  stat->closcnt ++;
 	    }else{
 		  mat[row][col] = 7;
 		  mat[col][row] = 7;
+		  stat->proxcnt ++;
+
 	    }
       }
       FILE* gpfp = fopen(gpfile.c_str(), "w");
@@ -3257,22 +3338,54 @@ void overlap_gen_contact_map(int numres, string dirname, string accn){
       fprintf(gpfp,"set rtics axis in scale 0,0 nomirror norotate  autojustify\n");
       fprintf(gpfp,"set title \"Contact map distribution. accn:%s\"\n", accn.c_str()); 
       fprintf(gpfp,"set zrange [ * : * ] noreverse writeback\n");
-      fprintf(gpfp,"set cblabel \"Score\"\n"); 
-      fprintf(gpfp,"set cbrange [ 0.00000 : 7.00000 ] noreverse nowriteback\n");
+      //fprintf(gpfp,"set cblabel \"Score\"\n"); 
+      int addon = stat->chncnt > 0 ? 1 : 0;
+      int maxcol = 8 + addon;
+      fprintf(gpfp, "set palette maxcolors %d\n", maxcol);
+      fprintf(gpfp,"set cbrange [ 0.0000 : %8.4lf ] noreverse nowriteback\n", (double)(maxcol));
+      char palette[1024];
+      strcpy(palette, "set palette define (0 \"#252121\", 1 \"#ff2bd5\", 2 \"#a8a8a8\", 3 \"#ffbc00\", 4 \"red\", 5 \"#0055ff\", 6 \"green\", 7 \"white\"");
+//      strcpy(palette, "set palette define (0 \"#000030\", 0 \"black\", 1 \"yellow\", 1 \"yellow\", 2 \"gold\", 2 \"gold\", 3 \"orange\", 3 \"orange\", 4 \"red\", 4 \"red\", 5 \"#ff2bd5\", 5 \"#ff2bd5\", 6 \"green\", 6 \"green\", 7 \"white\", 7 \"white\"");
+      char tmpstr[100];
+      for(int i=0; i<addon; ++i){
+	    sprintf(tmpstr, ", %d \"black\"", 8+i);
+	    strcat(palette, tmpstr);
+
+      }
+      strcat(palette, ")\n");
+      if(addon == 0){
+	    fprintf(gpfp, "set cbtics nomirror out (\"FAR\" 0.5, \"ADJA\" 1.5, \"ASTK\" 2.5, \"CROS\" 3.5, \"NC-BP\" 4.5,\"C-BP\" 5.5,\"CLOS\" 6.5, \"PROX\" 7.5)\n");
+      }else{
+	    fprintf(gpfp, "set cbtics nomirror out (\"BGCOL\" 0.5, \"ADJA\" 1.5, \"ASTK\" 2.5, \"CROS\" 3.5, \"NC-BP\" 4.5,\"C-BP\" 5.5,\"CLOS\" 6.5, \"PROX\" 7.5, \"CHN\" 8.5)\n");
+      }
+      
+      /*switch(range){
+	    case 1 : strcat(palette, ",  8  \"#ababab\")\n");
+		     break;
+	    case 2 : strcat(palette, ",  8 rgb \"gray20\",  9 rgb \"gray40\")\n");
+		     break;
+	    case 3 : strcat(palette, ",  8 rgb \"gray20\",  9 rgb \"gray40\",  10 rgb \"gray60\")\n");
+		     break;
+	    case 4 : strcat(palette, ",  8 \"#464242\",  9  \"#5A5757\",  10 \"#7E7979\", 11 \"#181212\")\n");
+		     break;
+	    default:
+		     strcat(palette, ")\n");
+      }*/
       fprintf(gpfp,"set rrange [ * : * ] noreverse writeback\n");
-      fprintf(gpfp,"set palette define (0 \"black\", 0 \"black\", 1 \"yellow\", 1 \"yellow\", 2 \"gold\", 2 \"gold\", 3 \"orange\", 3 \"orange\", 4 \"red\", 4 \"red\", 5 \"blue\", 5 \"blue\", 6 \"green\", 6 \"green\", 7 \"white\", 7 \"white\")\n");
+//      fprintf(gpfp,"set palette define (0 \"black\", 0 \"black\", 1 \"yellow\", 1 \"yellow\", 2 \"gold\", 2 \"gold\", 3 \"orange\", 3 \"orange\", 4 \"red\", 4 \"red\", 5 \"blue\", 5 \"blue\", 6 \"green\", 6 \"green\", 7 \"white\", 7 \"white\")\n");
+      fprintf(gpfp, "%s", palette);
       fprintf(gpfp,"set term postscript\n");
       fprintf(gpfp,"set output \"%s.ps\"\n", accn.c_str());
 
       fprintf(gpfp, "$mapdata << EOD\n");
       for(int i=0; i<numres; ++i){
-	    fprintf(gpfp," ,%d", i+1);
+	    fprintf(gpfp," ,%2d", i+1);
       }
       fprintf(gpfp,"\n");
       for(int i=0; i<numres; ++i){
-	    fprintf(gpfp,"%d ", i+1);
+	    fprintf(gpfp,"%d", i+1);
 	    for(int j=0; j<numres; ++j){
-		  fprintf(gpfp," ,%d ",mat[i][j]);
+		  fprintf(gpfp,",%d",mat[i][j]);
 	    }
 	    fprintf(gpfp,"\n");
       }
@@ -3283,9 +3396,7 @@ void overlap_gen_contact_map(int numres, string dirname, string accn){
       fprintf(gpfp,"set datafile separator\n");
 
       fclose(gpfp);
-      fclose(proxfp);
       fclose(robfp);
-
 
       gen_all_contact_bpseq(dirname, accn, mat, numres);
       gen_varna_applet(dirname, accn, mat, numres);

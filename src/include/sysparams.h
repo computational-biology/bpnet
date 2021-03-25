@@ -20,6 +20,7 @@ public:
     string is_overlap;
     string _outformat;
     string type;
+    int cleaned_res;
     double wt_overlap_cutoff;
     string adj_file;
     string file_dir;
@@ -28,20 +29,21 @@ public:
     sysparams(){
             res_from_size = 0;
             res_to_size = 99999999;
-            cifpymol = "FALSE";
+            cifpymol = "TRUE";
             corpymol = "TRUE";
         _from_size = 3;
-        _to_size = 30;
+        _to_size = 999999;
+	cleaned_res = 0;
         _exdeg = 2;
         _total_count = 0;
         _num_exdeg = 1;
         _num_cycles = 0;
         _outformat = "new";
-        is_overlap = "FALSE";
         type = "BP";
         wt_overlap_cutoff = 0.0001;
         adj_file = "TRUE";
-	overlap_flag = 0;
+        is_overlap = "TRUE";
+	overlap_flag = 1;
     }
 };
 
