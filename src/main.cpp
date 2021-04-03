@@ -7,6 +7,13 @@
 #include <string.h>
 
 
+#include <rnabp.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <spgraph.h>
+#include <djset.h>
+#include <overlap.h>
+#include <iostream>
 
 
 
@@ -414,7 +421,7 @@ void compute_base_pair_components(string accn, FILE* outputfile,
         syspar->type = "BP";
         read_out_file_and_tokenize(syspar->file_dir+accn, out_file_tokens);
     }
-    Graph g = Graph(num_cleaned_res, 1); // 0 means full graph with cif id etc.
+    Graph g = Graph(num_cleaned_res, 1); // 1 means full graph with cif id etc.
 
     //printf("test1\n");
     /*
@@ -610,20 +617,11 @@ void show_help(){
 int main(int argc, char* argv[]) {
 
     sysparams syspar = sysparams();
+    OvlpParameters::proximity_method = METHOD_OVERLAP;
     ntvariants_t ntvariants;
     ntvar_populate(&ntvariants);
     string* file_array  = new string[argc];
     int file_count      = 0;
-    char cifparam[512] = "-dummyval";
-    char accnparam[512] = "-dummyval";
-    char htparam[512] = "-HT";
-    char hdparam[512] = "-dummyval";
-    char hdvalparam[512] = "-dummyval";
-    char angparam[512] = "-dummyval";
-    char angvalparam[512] = "-dummyval";
-    char chparam[512] = "-dummyval";
-    char sgparam[512] = "-dummyval";
-    char corparam[50] = "-dummyval";
     
     OvlpSurfaceDataFile * surfgen = NULL;
     OvlpAllSurfacePoints * all_surf_points = NULL;
@@ -634,6 +632,7 @@ int main(int argc, char* argv[]) {
         show_help();
         exit(1);
     }
+    int overlapwtflag =0;
     cout<<"THE ENTIRE PROCESS STARTS"<<endl;
     for (int i = 1; i < argc; ++i) {
         std::string arg = argv[i];
@@ -641,17 +640,17 @@ int main(int argc, char* argv[]) {
             show_help();
             exit(1);
         }else if(arg.substr(0,8)=="-hbdist="){
-	      strcpy(hdparam, "-HD");
-	      strcpy(hdvalparam,arg.substr(8).c_str());
+	      strcpy(syspar.hdparam, "-HD");
+	      strcpy(syspar.hdvalparam,arg.substr(8).c_str());
 	}else if(arg.substr(0,8)=="-cutang="){
-	      strcpy(angparam, "-VA");
-	      strcpy(angvalparam, arg.substr(8).c_str());
+	      strcpy(syspar.angparam, "-VA");
+	      strcpy(syspar.angvalparam, arg.substr(8).c_str());
 	}else if(arg.substr(0,13)=="-sugmed=false"){
-	      strcpy(sgparam, "-SG");
+	      strcpy(syspar.sgparam, "-SG");
 	}else if(arg.substr(0,12)=="-chmed=false"){
-	      strcpy(chparam, "-CH");
+	      strcpy(syspar.chparam, "-CH");
 	}else if(arg.substr(0,13)=="-hetatm=false"){
-	      strcpy(chparam, "-dummyval");
+	      strcpy(syspar.htparam, "-dummyval");
 	}
 
 
@@ -662,6 +661,7 @@ int main(int argc, char* argv[]) {
 	      if(arg.substr(9,4) == "true"){
 		    syspar.overlap_flag = 1;
 		    syspar.is_overlap = "TRUE";
+		    syspar.type = "OL";
 	      }else if(arg.substr(9,5) == "false"){
 		    syspar.overlap_flag = 0;
 		    syspar.is_overlap = "FALSE";
@@ -669,16 +669,7 @@ int main(int argc, char* argv[]) {
 		    fprintf(stderr, "Error in flag -overlap, the value will be either true or false\n");
 		    exit(EXIT_FAILURE);
 	      }
-	}else if(arg.substr(0,5) == "-adj="){
-            if(arg.substr(5)== "true"){
-                syspar.adj_file = "TRUE";
-            }else if(arg.substr(5)== "false"){
-                syspar.adj_file = "FALSE";
-            }else{
-                cerr<<"invalid value supplied to -adj... supply true or false"<<endl;
-                exit(EXIT_FAILURE);
-            }
-        }else if(arg.substr(0,10) == "-cifpymol="){
+	}else if(arg.substr(0,10) == "-cifpymol="){
 		if(arg.substr(10,4) == "true"){
 			syspar.cifpymol = "TRUE";
 			syspar.corpymol = "FALSE";
@@ -698,26 +689,18 @@ int main(int argc, char* argv[]) {
 			cerr<<"invalid value supplied to -corpymol... supply true or false"<<endl;
 			exit(EXIT_FAILURE);
 		}
-	}/*else if(arg.substr(0,8) == "-numres="){
-            string subarg = arg.substr(8);
-            int split = subarg.find("-");
-            if(split < 0){
-                cerr<<"Error in -numres params..."<<endl;
-            }else{
-                syspar.res_from_size = atoi(subarg.substr(0,split).c_str());
-                syspar.res_to_size =  atoi(subarg.substr(split+1).c_str());
-            }
-            if((syspar.res_from_size == 0 && syspar.res_to_size == 0)||(syspar.res_from_size<0 || syspar.res_to_size<0)|| (syspar.res_from_size > syspar.res_to_size)){
-                cerr<<"Error in -numres params..."<<endl;
-                exit(19);
-            }
-        }*/else if(arg.substr(0,12) == "-ovlpcutoff="){
-            cerr<<"Worning.... Overlap cutoff works only for overlap and is ignored for base-pair networks"<<endl;
-            syspar.wt_overlap_cutoff = atof(arg.substr(12).c_str());
+	}else if(arg.substr(0,10) == "-wtcutoff="){
+            syspar.wt_overlap_cutoff = atof(arg.substr(10).c_str());
+	    overlapwtflag =1;
         }else if(arg.substr(0,8) == "-cycles=") {
             syspar._num_cycles = atoi(arg.substr(8).c_str());
+        }else if(arg.substr(0,15) == "-wttype=c1p-c1p") {
+	    OvlpParameters::proximity_method = METHOD_C1PC1P;
+            syspar.overlap_method = 1;
         }else if(arg.substr(0,7) == "-exdeg="){
             syspar._exdeg = atoi(arg.substr(7).c_str());
+        }else if(arg.substr(0,10) == "-numexdeg="){
+            syspar._num_exdeg = atoi(arg.substr(10).c_str());
         }else if(arg.substr(0,9) == "-netsize="){
             string subarg = arg.substr(9);
             int split = subarg.find("-");
@@ -740,9 +723,17 @@ int main(int argc, char* argv[]) {
             file_count++;
         }
     }
-    cout<<" THE QUERY: From ="<<syspar._from_size<<", to="<<syspar._to_size<<" with minsize="<<syspar._exdeg<<endl;
-    FILE* fp = fopen("pairchain.net", "w");
-    fprintf(fp,"STARTS\n");
+    if(overlapwtflag == 1 &&  syspar.overlap_flag == 1 && syspar.overlap_method == 1){
+		fprintf(stderr, "Error... C1'-C1' dist and weight cutoff cannot be opted simultaneously for overlap.\n");
+		exit(EXIT_FAILURE);
+    }
+    if(overlapwtflag == 1 && syspar.overlap_flag == 0){
+		fprintf(stderr, "Error... Weight cutoff cannot be opted for base pair networks.\n");
+		exit(EXIT_FAILURE);
+    }
+
+//    FILE* fp = fopen("pairchain.net", "w");
+//    fprintf(fp,"STARTS\n");
     
     char* nucdir = getenv("NUCLEIC_ACID_DIR");
 	if(nucdir == NULL){
@@ -759,13 +750,14 @@ int main(int argc, char* argv[]) {
       all_surf_points = surfgen->generate_surface_points(3);
       nucVariants = new OvlpRNA_NucVatiants();
     }
+    syspar.print_params(stdout);
     for(int i=0; i<file_count; i++){
 	  int ressize;
         string file = file_array[i];
         int pos_sep = (int)file.find_last_of("/");
         int pos_dot = (int)file.find_last_of(".");
         if(pos_dot < 0){
-            cerr<<"File extension not supplied. Please supply .pdb or .cif, out or .rob file"<<endl;
+            cerr<<"File extension not supplied. Please supply .pdb or .cif"<<endl;
             exit(1);
         }
 
@@ -779,40 +771,16 @@ int main(int argc, char* argv[]) {
         syspar.file_dir = file.substr(0, pos_sep + 1);
         
         cout<<"STARTS ACCN: "<<accn<<endl;
-        /*if(ext == "out"){
-	      string file_path = syspar.file_dir+syspar.accn+".out";
-	      FILE* fp = fopen(file_path.c_str(),"r");
-	      if(fp == NULL){     
-		    fprintf(stderr, "Error... out format chosen, but directory does not contain .out or .dat file\n");
-		    exit(EXIT_FAILURE);
-	      }
-	      fclose(fp);
-
-	      file_path = syspar.file_dir+syspar.accn+".dat";
-	      fp = fopen(file_path.c_str(),"r");
-	      if(fp == NULL){     
-		    fprintf(stderr, "Error... out format chosen, but directory does not contain .out or .dat file\n");
-		    exit(EXIT_FAILURE);
-	      }
-	      fclose(fp);
-            compute_base_pair_components(accn, fp, &syspar, &ntvariants);
-        }
-        else */ 
 	if(ext == "cif" || ext == "pdb"){
-	      strcpy(accnparam,file.c_str());
-	      /*if(syspar.overlap_flag == 0){
-		    strcpy(corparam,"-NOCOR");
-	      }*/
+	      strcpy(syspar.accnparam,file.c_str());
 	      if(ext == "cif" || ext == "pdb"){
 		    if(ext == "cif"){
-			  strcpy(cifparam, "-cif");
+			  strcpy(syspar.cifparam, "-cif");
 		    }
-//		    printf("Starting BPFIND\n"); // bhatta
-		    callbpfindc(cifparam, accnparam, htparam, 
-				hdparam, hdvalparam, angparam, 
-				angvalparam, chparam, sgparam, 
-				corparam );
-//		    printf("Finished BPFIND\n"); // bhatta
+		    callbpfindc(syspar.cifparam, syspar.accnparam, syspar.htparam, 
+				syspar.hdparam, syspar.hdvalparam, syspar.angparam, 
+				syspar.angvalparam, syspar.chparam, syspar.sgparam, 
+				syspar.corparam );
 	      }
 
 	      string file_path = syspar.file_dir+syspar.accn+".out";
@@ -825,18 +793,22 @@ int main(int argc, char* argv[]) {
 		    cout<<"----------------------------------------------"<<endl<<endl;
 		    continue;
 	      }
-
-
-
-
 	      if(syspar.overlap_flag == 0){
-		    compute_base_pair_components(accn, fp, &syspar, &ntvariants, &stat);
+		    struct graph g;
+		    struct djset set;
+		    struct nucbp* nbp;
+		    graph_init(&g, ressize, UNDIRECTED);
+		    nbp = (struct nucbp*) malloc ((ressize) * sizeof(struct nucbp));
+		    string out = syspar.file_dir+syspar.accn+".out";
+		    rnabp_scan_out(nbp, &ntvariants, ressize, out.c_str(), &g);
+		    djset_init(&set, ressize);
+		    graph_kruskal_component(&g, &set);
+		    print_adjinfo(nbp, ressize, &set, &ntvariants, &syspar, &g, &stat);
+
+		    graph_free(&g);
+		    djset_free(&set);
+		    free(nbp);
 	      }else{
-		    /*syspar.overlap_flag = 0;
-		    syspar.is_overlap = "FALSE";
-		    compute_base_pair_components(accn, fp, &syspar, &ntvariants);
-		    syspar.overlap_flag = 1;
-		    syspar.is_overlap = "TRUE";*/
 		    cout<<"        CONTACT COMPUTATION STARTS"<<endl;
 		    int resinum; 
 		    string rob_file_path = syspar.file_dir+syspar.accn+".rob";
@@ -849,78 +821,33 @@ int main(int argc, char* argv[]) {
                             all_surf_points,
                             nucVariants) ;
 		    
-		    //call_overlap(rob_file_path); 
-		    
 		    ovlp_residue_all_prox_comp(syspar.file_dir+syspar.accn, 4.0, nucVariants_prox, &resinum, &stat);
 		    overlap_gen_contact_map(resinum, syspar.file_dir, syspar.accn, &stat, rna);
-		    //rna->gen_dist_map();
-		    compute_base_pair_components(accn, fp, &syspar, &ntvariants, &stat);
+		    struct graph g;
+		    struct djset set;
+		    struct nucbp* nbp;
+		    graph_init(&g, ressize, UNDIRECTED);
+		    nbp = (struct nucbp*) malloc ((ressize) * sizeof(struct nucbp));
+		    string out = syspar.file_dir+syspar.accn+".rob";
+		    nucbp_scan_rob(nbp, &ntvariants, ressize, out.c_str(), &g);
+		    djset_init(&set, ressize);
+		    graph_kruskal_component(&g, &set);
+		    print_adjinfo(nbp, ressize, &set, &ntvariants, &syspar, &g, &stat);
+
+		    graph_free(&g);
+		    djset_free(&set);
+		    free(nbp);
 		    delete rna;
 
 	      }
-
-            // Compute_base_pair_components(accn, fp, &syspar);
         }else{
             cerr<<"Error..... invalid extension of the file "<<ext<<". Supply .cif or .pdb file"<<endl;
 	      exit(EXIT_FAILURE);
 	}
-	/*
-	return 0;
-	if(ext == "out"){
-	      string file_path = syspar.file_dir+syspar.accn+".out";
-	      FILE* fp = fopen(file_path.c_str(),"r");
-	      if(fp == NULL){     
-		    fprintf(stderr, "Error... out format chosen, but directory does not contain .out or .dat file\n");
-		    exit(EXIT_FAILURE);
-	      }
-	      fclose(fp);
-
-	      file_path = syspar.file_dir+syspar.accn+".dat";
-	      fp = fopen(file_path.c_str(),"r");
-	      if(fp == NULL){     
-		    fprintf(stderr, "Error... out format chosen, but directory does not contain .out or .dat file\n");
-		    exit(EXIT_FAILURE);
-	      }
-	      fclose(fp);
-            compute_base_pair_components(accn, fp, &syspar, &ntvariants);
-        }else if(syspar.overlap_flag == 1){
-	      string rob_file_path = syspar.file_dir+syspar.accn+".rob";
-	      
-	      syspar.is_overlap = "TRUE";
-	      compute_base_pair_components(accn, fp, &syspar, &ntvariants);
-	}else if(ext == "rob"){
-	      string file_path = syspar.file_dir+syspar.accn+".out";
-	      FILE* fp = fopen(file_path.c_str(),"r");
-	      if(fp == NULL){     
-		    fprintf(stderr, "Error... Lazy overlap chosen, but directory does not contain .out, .dat or .rob file\n");
-		    exit(EXIT_FAILURE);
-	      }
-	      fclose(fp);
-
-	      file_path = syspar.file_dir+syspar.accn+".dat";
-	      fp = fopen(file_path.c_str(),"r");
-	      if(fp == NULL){     
-		    fprintf(stderr, "Error... Lazy overlap chosen, but directory does not contain .out, .dat or .rob file\n");
-		    exit(EXIT_FAILURE);
-	      }
-	      fclose(fp);
-	      file_path = syspar.file_dir+syspar.accn+".rob";
-	      fp = fopen(file_path.c_str(),"r");
-	      if(fp == NULL){     
-		    fprintf(stderr, "Error... Lazy overlap chosen, but directory does not contain .out, .dat or .rob file\n");
-		    exit(EXIT_FAILURE);
-	      }
-	      fclose(fp);
-	      syspar.is_overlap = "TRUE";
-	      compute_base_pair_components(accn, fp, &syspar, &ntvariants);
-        }else{
-            cerr<<"Error..... invalid extension of the file "<<ext<<". Supply .out or .rob file"<<endl;
-            exit(1);
-        }
-    */
 	FILE* summfp = stdout;
 	fprintf(summfp, "---------------------------S U M M A R Y  R E P O R T ---------------------\n");
 	fprintf(summfp, "TOTAL RESIDUE : %d\n", ressize);
+	fprintf(summfp, "TOTAL NO. OF NETWORKS IN STRUCTURE : %d\n", syspar.total_per_structure);
 	if(syspar.overlap_flag == TRUE){
 	      fprintf(summfp, "NO. OF BASE-PAIRS : %d\n", stat.cancnt + stat.noncancnt);
 	      fprintf(summfp, "NO. OF CANONICAL : %d\n", stat.cancnt);
@@ -934,17 +861,15 @@ int main(int argc, char* argv[]) {
 	      fprintf(summfp, "NO. OF PROX : %d\n", stat.proxcnt);
 	}else{
 	      fprintf(summfp, "Overlap not requested");
-
-
 	}
+	cout<<"ENDS ACCN: "<<accn<<endl;
+	cout<<"----------------------------------------------"<<endl<<endl;
     }
     if(syspar.overlap_flag == 1){
       delete surfgen;
       delete all_surf_points;
       delete nucVariants;
     }
-    fprintf(fp,"ENDS");
-    fclose(fp);
     printf("Total %d components found on your query\n",syspar._total_count);
     delete [] file_array;
     cout<<"THE ENTIRE PROCESS COMPLETES"<<endl;

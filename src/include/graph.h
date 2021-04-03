@@ -330,14 +330,16 @@ void isompophic_name(int **A, int *deg, int size, char *name){
 	}
 }
 
+#define EMPTY (-1)
+#define MAX_DEG (6)
 class Graph{
     int V;    // No. of vertices
 
     // Pointer to an array containing adjacency lists
-    int** Adj;
+    int* Adj;
     int* Degree;
-    string ** adjbp;
-    double** adjenergy;
+    string * adjbp;
+    double* adjenergy;
     int* cifid;
     char** chain;
     char* ins_code;
@@ -354,7 +356,7 @@ class Graph{
         // Recur for all the vertices
         // adjacent to this vertex
         for(int i = 0; i < V; i++) {
-            if(Adj[v1][i] == 1){
+	      if(get_edge_index(v1, i) >= 0){
                 if (!visited[i]) {
                     DFS_visit(i, visited, component);
                 }
@@ -363,6 +365,50 @@ class Graph{
         }
     }
 public:
+    int get_edge_index(int i, int j){
+	  int adjval;
+	  for(int k=0; i<MAX_DEG; ++k){
+		adjval = Adj[i*V+k];
+		if(adjval == EMPTY) return -1;
+		if(Adj[i*V+k] == j) return k;// k is returned for reference to other access like weight;
+	  }
+	  return -1;
+    }
+    int set_edge(int i, int j){
+	  int pos;
+	  for(int k=0; k<MAX_DEG; ++k){
+		pos = i*V + k;
+		if(Adj[pos] == -1){
+		      Adj[pos] = j;
+		      return k;
+		}
+	  }
+	  {    /* Exception Handling */ 
+		fprintf(stderr, "Falat error in func %s on file %s at line %d... MAX DEGREE overflows.\n", __func__, __FILE__, __LINE__);
+		exit(EXIT_FAILURE);
+	  }
+	  return -1;
+    }
+    inline double get_weight(int i, int index){
+	  return adjenergy[i*V + index];
+    }
+    inline void set_wetght(int i, int index, double wt){
+	  adjenergy[i*V + index] = wt;
+	  return;
+    }
+
+
+    inline string get_bp(int i, int index){
+	  return adjbp[i*V + index];
+    }
+    inline void set_bp(int i, int index, string bpname){
+	  adjbp[i*V + index] = bpname;
+	  return;
+    }
+
+
+
+
     void fprint_component_summary(FILE* fp){
     	int s = (int)all_components.size();
 		fprintf(fp, "        SIZE:");
@@ -450,18 +496,15 @@ public:
         this->graph_type = graph_type;
         this->V = V;
         if(graph_type == 0){
-            Adj = new int*[V];
+            Adj = new int[V * MAX_DEG];
             Degree = new int[V];
             for (int k = 0; k < V ; ++k) {
                 Degree[k] = 0;
             }
-            for(int i = 0; i < V; ++i) {
-                Adj[i] = new int[V];
-            }
-            for(int i=0; i<V; i++){
-                for(int j=0; j<V; j++){
-                    Adj[i][j] = 0;
-                }
+            for(int i = 0; i <V; ++i) {
+                for(int j=0; j<MAX_DEG; ++j){
+		      Adj[i*V + j] = -1;
+		}
             }
             adjbp = NULL;
             adjenergy = NULL;
@@ -471,9 +514,9 @@ public:
             res_act_name = NULL;
             res_class_name = NULL;
         }else if(graph_type == 1){
-            Adj = new int*[V];
-            adjbp = new string*[V];
-            adjenergy = new double*[V];
+            Adj = new int[V* MAX_DEG];
+            adjbp = new string[V * MAX_DEG];
+            adjenergy = new double[V * MAX_DEG];
             Degree = new int[V];
             cifid = new int[V];
             chain = new char*[V];
@@ -482,12 +525,8 @@ public:
             res_class_name = new char[V];
 
             for(int i = 0; i < V; ++i) {
-                Adj[i] = new int[V];
-                adjbp[i] = new string[V];
-                adjenergy[i] = new double[V];
                 chain[i] = new char[5];
                 res_act_name[i] = new char[5];
-
             }
             for (int k = 0; k < V ; ++k) {
                 Degree[k] = 0;
@@ -498,28 +537,16 @@ public:
 
             }
             for(int i=0; i<V; i++){
-                for(int j=0; j<V; j++){
-                    Adj[i][j] = 0;
-                    adjbp[i][j] = "";
-                    adjenergy[i][j] = 0.0;
-
-
+                for(int j=0; j<MAX_DEG; j++){
+                    Adj[i*V + j] = -1;
+		    adjbp[i*V + j] = "";
+		    adjenergy[i*V + j] = 0.0;
                 }
             }
         }
     }
     ~Graph(){
         // cout<<"Destructor invoked"<<endl;
-        for(int i = 0; i < V; ++i) {
-            delete [] Adj[i];
-            if(graph_type == 1){
-                delete [] adjbp[i];
-                delete [] adjenergy[i];
-                delete [] chain[i];
-                delete [] res_act_name[i];
-            }
-
-        }
         delete [] Adj;
         delete [] Degree;
         if(graph_type == 1){
@@ -530,15 +557,18 @@ public:
             delete [] res_act_name;
             delete [] res_class_name;
             delete [] ins_code;
-            delete [] valid_comp;
+            free(valid_comp);
         }
 
         //cout<<"      MEMORY CLEANUP DONE SUCCESSFULLY"<<endl;
     }
 
     void addDirectedEdge(int v1, int v2){
-        assert(v1>=0 && v1<V && v2>=0 && v2 <V);
-        Adj[v1][v2] = 1;
+	  if( ! (v1>=0 && v1<V && v2>=0 && v2 <V)){    /* Exception Handling */ 
+		fprintf(stderr, "Error in %s at line %d... vertex overflow/underflow.\n", __FILE__, __LINE__);
+		exit(EXIT_FAILURE);
+	  }
+        set_edge(v1, v2);
         Degree[v1] = Degree[v1] + 1;
     }
     void add_cif_details(int corid, int cif, const char* cif_chain, char ins, const char* res_name, ntvariants_t*
@@ -578,7 +608,7 @@ public:
         int count = 0;
         for (int i = 0; i < V; ++i) {
             for (int j = i+1; j < V; ++j) {
-                if(Adj[i][j] == 1){
+                if(get_edge_index(i, j) >=0 ){ // if there is edge.
                     int leader_i = set.Find(i);
                     int leader_j = set.Find(j);
                     //cout<<"i="<<leader_i<<", "<<leader_j<<endl;
@@ -593,9 +623,10 @@ public:
     }
     void addBP_and_Evalue(int v1, int v2, string bp, double eval){
         assert(v1>=0 && v1<V && v2>=0 && v2 <V);
-        if(adjbp[v1][v2] == ""){
-            adjbp[v1][v2] = bp;
-            adjenergy[v1][v2] = eval;
+	int index = get_edge_index(v1,v2);
+        if(get_bp(v1, index) == ""){
+	    set_bp(v1, index, bp);
+	    set_wetght(v1, index, eval);
         }
 
 //adjbp[v2][v1] = bp;
@@ -603,27 +634,27 @@ public:
     }
     void addBP_and_Evalue_from_rob(int v1, int v2, string bpfrom, string bpto, double eval){
         assert(v1>=0 && v1<V && v2>=0 && v2 <V);
-        if(adjbp[v1][v2] == ""){
-            adjbp[v1][v2] = bpfrom;
-            adjenergy[v1][v2] = eval;
+	int index = get_edge_index(v1,v2);
+        if(get_bp(v1, index) == ""){
+	    set_bp(v1, index, bpfrom);
+	    set_wetght(v1, index, eval);
         }
-        if(adjbp[v2][v1] == ""){
-            adjbp[v2][v1] = bpto;
-            adjenergy[v2][v1] = eval;
+	index = get_edge_index(v2,v1);
+        if(get_bp(v2, index) == ""){
+	    set_bp(v2, index, bpto);
+	    set_wetght(v2, index, eval);
         }
-
-
     }
     void addUndirectedEdge(int v1, int v2){
         assert(v1>=0 && v1<V && v2>=0 && v2 <V);
-        if(Adj[v1][v2] == 0){
-            Adj[v1][v2] = 1;
-            Degree[v1] = Degree[v1] + 1;
-        }
-        if(Adj[v2][v1] == 0){
-            Adj[v2][v1] = 1;
-            Degree[v2] = Degree[v2] + 1;
-        }
+	if(get_edge_index(v1, v2) == -1){
+	      set_edge(v1, v2);
+	      Degree[v1] = Degree[v1] + 1;
+	}
+	if(get_edge_index(v2, v1) == -1){
+	      set_edge(v2, v1);
+	      Degree[v2] = Degree[v2] + 1;
+	}
     }
     int get_degree(int v1){
         return Degree[v1];  // i=0 returns cor id 1;
@@ -691,7 +722,11 @@ public:
             }
             for(int j=0; j<comp_size; ++j){
                 int serial_j = component.at(j);
-                comp_adj[i][j] = Adj[serial_i][serial_j];
+		if(get_edge_index(serial_i, serial_j) >=0){
+		      comp_adj[i][j] = 1;
+		}else{
+		      comp_adj[i][j] = 0;
+		}
                 if(comp_adj[i][j] == 1){
                     gcomp.addUndirectedEdge(i, j);  /* Creating comonent graph for cycle detection*/
                 }
@@ -757,13 +792,16 @@ public:
 						jth_ins[2] = '\0';
 
 
+						string bpname = get_bp(cor_res_no[i]-1, cor_res_no[j]-1);
+						double enerval = get_weight(cor_res_no[i]-1, cor_res_no[j]-1);
                         fprintf(file_adj, "EDGE %5d %5d  %c:%c-%4s %8.2lf %c:%c %s %5d%2s %3s %5d%2s %3s %3s "
 												"%3s\n",
                                 cor_res_no[i], cor_res_no[j],
                                 res_class_name[cor_res_no[i]-1],
                                 res_class_name[cor_res_no[j]-1],
-                                adjbp[cor_res_no[i]-1][cor_res_no[j]-1].c_str(),
-                                adjenergy[cor_res_no[i]-1][cor_res_no[j]-1], seq->sec_seq_str[cor_res_no[i] -1 ],
+                                bpname.c_str(),
+                                enerval,
+				seq->sec_seq_str[cor_res_no[i] -1 ],
                                 seq->sec_seq_str[cor_res_no[j] -1],
                                 syspar->type.c_str(),
                                 cifid[cor_res_no[i] -1],
@@ -810,7 +848,7 @@ public:
                 for(int i=0; i<comp_size; ++i){
                     fprintf(file_adj,"WEGT   %s %5d        ", syspar->type.c_str(), cor_res_no[0]);
                     for(int j=0; j<comp_size; ++j){
-                        fprintf(file_adj, "%6.2lf ", adjenergy[cor_res_no[i]-1][cor_res_no[j]-1]);
+                        fprintf(file_adj, "%6.2lf ", adjenergy[(cor_res_no[i]-1)*V + (cor_res_no[j]-1)]);
                     }
                     fprintf(file_adj, "\n");
                 }
@@ -825,6 +863,7 @@ public:
                 delete [] comp_adj[i];
             }
             delete [] comp_adj;
+	    delete [] comp_deg;
         }
 
     }

@@ -156,5 +156,33 @@ int normal_uracil(const char* base){
     }
 }
 
+char ntvar_getchar(ntvariants_t * ntvar, char* res_name)
+{
+      char base_name;
+
+        if(normal_guanine(res_name) == true){
+            base_name = 'G'; /* Upper case */
+        }else if(normal_cytosine(res_name) == TRUE){
+            base_name = 'C';
+        }else if(normal_adenine(res_name) == TRUE){
+            base_name = 'A';
+        }else if(normal_uracil(res_name) == TRUE){
+            base_name = 'U';
+        }else if(ntvar_is_guavar(ntvar, res_name) == TRUE){
+            base_name = 'g'; /* lower case */
+        }else if(ntvar_is_cytvar(ntvar, res_name) == TRUE){
+            base_name = 'c';
+        }else if(ntvar_is_adevar(ntvar, res_name) == TRUE){
+            base_name = 'a';
+        }else if(ntvar_is_uravar(ntvar, res_name) == TRUE){
+            base_name = 'u';
+        }else{
+            fprintf(stderr, "Error... Unkonwn residue encountered (%s).\n", res_name);
+            exit(EXIT_FAILURE);
+        }
+	return base_name;
+
+}
+
 
 #endif //BPNET_BASIC_03_NTVARIANTS_H

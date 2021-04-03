@@ -287,7 +287,7 @@ c       write(*,*) params
        EXTERNAL VERIFY
        DIMENSION NUCL(96),ires(100000),
      1  hbdist(100000),hbangl(100000),localinfo(30),
-     2  bpinfo(30),tpinfo(10000),val2pr(10000,10000),
+     2  bpinfo(30),tpinfo(10000),val2pr(5),
      3  energylc(30),anglinfo(10000),bptype(30)
        
        integer atmN,base,ATGC,KS,basef,NN2,localinfo,nopair,prd,
@@ -314,21 +314,21 @@ c       write(*,*) params
        character*15 prnvar(40)
 	real invdegree
        common /basenms/adevar(200),guavar(200),cytvar(200),uravar(200)
-       COMMON /HBQUA/BASE(21,1000000),energy(20,1000000),
-     1                    yangle(20,1000000)
-       COMMON /HBQTYP/TYPE(20,1000000),FEATURE(20,1000000)
-       COMMON /NAMES/NAMED(9000000),RESD(9000000)
-       COMMON /CHAINS/CHAIND(9000000)
-       COMMON /ALPHA/XD(9000000),YD(9000000),ZD(9000000)
-       COMMON /BETA/IRESD(9000000),ISTS(1000000),IENS(1000000),nres,
+       COMMON /HBQUA/BASE(21,20000),energy(20,20000),
+     1                    yangle(20,20000)
+       COMMON /HBQTYP/TYPE(20,20000),FEATURE(20,20000)
+       COMMON /NAMES/NAMED(900000),RESD(900000)
+       COMMON /CHAINS/CHAIND(900000)
+       COMMON /ALPHA/XD(900000),YD(900000),ZD(900000)
+       COMMON /BETA/IRESD(900000),ISTS(1000000),IENS(1000000),nres,
      1   allins(1000000),nforce,navar,ngvar,ncvar,nuvar,mresd(1000000)
        COMMON /DELTA/l,lresno
        COMMON /DELTAD/tmppos,tmpins
        COMMON /GAMA/ATGC(1000000)
 c       common /options/cutang,cuteng,cutoff,hetatm
         common /options/cutang,cuteng,cutoff,hetatm,modelno
-       common /residue/resid(9000000)
-       common /occur/occ(9000000)
+       common /residue/resid(900000)
+       common /occur/occ(900000)
        common /num/kresd(1000000),prd(1000000)
        common /cum/pchaind(1000000),pcd(1000000),molid
        common /str/strseq(1000000)
@@ -729,9 +729,6 @@ c        iens(nres)=l
         enddo
 c        write(*,*) 'NRES=',nres
         do i = 1,nres               ! For Residue serial no. in NUPARM formalism
-	  do j=1,nres
-	    val2pr(i,j)=calcc1dis(i,j)
-	  enddo
 
 c*******************************ADE-ADE********************************
 
@@ -2663,11 +2660,16 @@ c        write(6,*) i,prd(i),resd(ists(i)),allins(ists(i)),pcd(i)
      3 j=1,base(1,i))
 
 	else
+	  do j=1,base(1,i)
+	    k=base(j+1,i)
+	    if(base(j+1,i).gt.0) val2pr(j)=calcc1dis(i,k)
+	  enddo
+	  
  	   write(52,119) i,prd(i),resd(ists(i)),allins(ists(i)),pcd(i),
      1 (base(j+1,i),prd(base(j+1,i)),
      2  resd(ists(base(j+1,i))),allins(ists(base(j+1,i))),
      2 pcd(base(j+1,i)),feature(j,i),type(j,i),bptp(j),
-     3 val2pr(base(j+1,i),i), j=1,base(1,i))
+     3 val2pr(j), j=1,base(1,i))
 
 	endif
         line=''
@@ -2861,19 +2863,19 @@ C      ----------------------------------------------------------######
        character*3 hbftr,feature,hbftrbck,resid,resd
        character*1 config,type,allins
        character*4 chaind 
-       COMMON /HBQUA/BASE(21,1000000),energy(20,1000000),
-     1                 yangle(20,1000000)
-       COMMON /HBQTYP/TYPE(20,1000000),FEATURE(20,1000000)
-       COMMON /NAMES/NAMED(9000000),RESD(9000000)
-       COMMON /CHAINS/CHAIND(9000000)
-       COMMON /ALPHA/XD(9000000),YD(9000000),ZD(9000000)
-       COMMON /BETA/IRESD(9000000),ISTS(1000000),IENS(1000000),nres,
+       COMMON /HBQUA/BASE(21,20000),energy(20,20000),
+     1                    yangle(20,20000)
+       COMMON /HBQTYP/TYPE(20,20000),FEATURE(20,20000)
+       COMMON /NAMES/NAMED(900000),RESD(900000)
+       COMMON /CHAINS/CHAIND(900000)
+       COMMON /ALPHA/XD(900000),YD(900000),ZD(900000)
+       COMMON /BETA/IRESD(900000),ISTS(1000000),IENS(1000000),nres,
      1    allins(1000000),nforce,navar,ngvar,ncvar,nuvar,mresd(1000000)
        COMMON /GAMA/ATGC(1000000)
 c       common /options/cutang,cuteng,cutoff,hetatm
         common /options/cutang,cuteng,cutoff,hetatm,modelno
-       common /residue/resid(9000000)
-       common /occur/occ(9000000)
+       common /residue/resid(900000)
+       common /occur/occ(900000)
 	distcut=cutoff
 	anglcut=cutang
        invdegree=3.14159/180.0 
@@ -3019,20 +3021,20 @@ C
        character*3 hbftr,feature,hbftrbck,resid,resd
        character*1 config,type,allins
        character*4 chaind
-       COMMON /HBQUA/BASE(21,1000000),energy(20,1000000),
-     1                yangle(20,1000000)
-       COMMON /HBQTYP/TYPE(20,1000000),FEATURE(20,1000000)
-c       COMMON /NAMES/NAMED(9000000),RESD(9000000)
-       COMMON /NAMES/NAMED(9000000),RESD(9000000)
-       COMMON /CHAINS/CHAIND(9000000)
-       COMMON /ALPHA/XD(9000000),YD(9000000),ZD(9000000)
-       COMMON /BETA/IRESD(9000000),ISTS(1000000),IENS(1000000),nres,
+       COMMON /HBQUA/BASE(21,20000),energy(20,20000),
+     1                    yangle(20,20000)
+       COMMON /HBQTYP/TYPE(20,20000),FEATURE(20,20000)
+c       COMMON /NAMES/NAMED(900000),RESD(900000)
+       COMMON /NAMES/NAMED(900000),RESD(900000)
+       COMMON /CHAINS/CHAIND(900000)
+       COMMON /ALPHA/XD(900000),YD(900000),ZD(900000)
+       COMMON /BETA/IRESD(900000),ISTS(1000000),IENS(1000000),nres,
      1     allins(1000000),nforce,navar,ngvar,ncvar,nuvar,mresd(1000000)
        COMMON /GAMA/ATGC(1000000)
 c       common /options/cutang,cuteng,cutoff,hetatm
         common /options/cutang,cuteng,cutoff,hetatm,modelno
-       common /residue/resid(9000000)
-       common /occur/occ(9000000)
+       common /residue/resid(900000)
+       common /occur/occ(900000)
 	ksugar=0
 	if(nsg.eq.0) then
 	distcut=cutoff
@@ -3157,14 +3159,14 @@ c
         CHARACTER*4 trgtatm,named,chaind
         character*3 resid,resd
         character*1 allins
-        COMMON /ALPHA/XD(9000000),YD(9000000),ZD(9000000)
-	COMMON /BETA/IRESD(9000000),ISTS(1000000),IENS(1000000),nres,
+        COMMON /ALPHA/XD(900000),YD(900000),ZD(900000)
+	COMMON /BETA/IRESD(900000),ISTS(1000000),IENS(1000000),nres,
      1    allins(1000000),nforce,navar,ngvar,ncvar,nuvar,mresd(1000000)
         COMMON /GAMA/ATGC(1000000) 
-        COMMON /NAMES/NAMED(9000000),RESD(9000000)
-        COMMON /CHAINS/CHAIND(9000000)
-        common /residue/resid(9000000)
-        common /occur/occ(9000000)
+        COMMON /NAMES/NAMED(900000),RESD(900000)
+        COMMON /CHAINS/CHAIND(900000)
+        common /residue/resid(900000)
+        common /occur/occ(900000)
 	degree = 180.0/3.1459
         NN = 0
 	distsg = 0.0
@@ -3238,7 +3240,7 @@ c        check for linearity of hydrogen bonds betn. a basepair
 c       ----------------------------------------------------------####
 
         subroutine linearity(j,M,l,theta)
-        COMMON /ALPHA/XD(9000000),YD(9000000),ZD(9000000)
+        COMMON /ALPHA/XD(900000),YD(900000),ZD(900000)
 
             x1=(xd(j)-xd(M))
             y1=(yd(j)-yd(M))
@@ -3271,7 +3273,7 @@ c      ----------------------------------------------------------#######
         real angle,anglconv
         integer atm11,atm12,atm21,atm22
         character*1 orient
-        COMMON /ALPHA/XD(9000000),YD(9000000),ZD(9000000)
+        COMMON /ALPHA/XD(900000),YD(900000),ZD(900000)
 c
         degree = 180.0/3.1459
 	if(atm11.ne.0.and.atm12.ne.0.and.atm21.ne.0.and.atm22.ne.0) then
@@ -3324,13 +3326,13 @@ C
        character*1 fastaseq(100000),allins
        CHARACTER*4 CHAIND,pcd,pchaind,molid
        integer presd, prd,nstfrg
-        COMMON /NAMES/NAMED(9000000),RESD(9000000)
-       COMMON /CHAINS/CHAIND(9000000)
-       COMMON /ALPHA/XD(9000000),YD(9000000),ZD(9000000)
-       COMMON /BETA/IRESD(9000000),ISTS(1000000),IENS(1000000),nres,
+        COMMON /NAMES/NAMED(900000),RESD(900000)
+       COMMON /CHAINS/CHAIND(900000)
+       COMMON /ALPHA/XD(900000),YD(900000),ZD(900000)
+       COMMON /BETA/IRESD(900000),ISTS(1000000),IENS(1000000),nres,
      1     allins(1000000),nforce,navar,ngvar,ncvar,nuvar,mresd(1000000)
-       common /residue/resid(9000000)
-       common /occur/occ(9000000)
+       common /residue/resid(900000)
+       common /occur/occ(900000)
        common /num/kresd(1000000),prd(1000000)
        common /cum/pchaind(1000000),pcd(1000000),molid
 
@@ -3512,8 +3514,8 @@ C NNW : NO.OF HELICES CONTAINING AT LEST ONE NON-WATSON-CRICK BP
        character*4 pcd,pchaind,namechn(500),named,molid
        common /str/strseq(1000000)
        common /cum/pchaind(1000000),pcd(1000000),molid
-        COMMON /NAMES/NAMED(9000000),RESD(9000000)
-       COMMON /BETA/IRESD(9000000),ISTS(1000000),IENS(1000000),nres,
+        COMMON /NAMES/NAMED(900000),RESD(900000)
+       COMMON /BETA/IRESD(900000),ISTS(1000000),IENS(1000000),nres,
      1     allins(1000000),nforce,navar,ngvar,ncvar,nuvar,mresd(1000000)
 
        OPEN(UNIT=1,FILE=nmpass,STATUS='OLD',ERR=100)
@@ -3947,7 +3949,7 @@ c        call system(line)
         character*15 cda(30),atmnm,res,sequ,chain,alternate
         common /cum/pchaind(1000000),pcd(1000000),molid
         real xcoor,ycoor,zcoor,occp
-        integer mresd(9000000),static
+        integer mresd(900000),static
         
         imolid=index(molid,' ')
 C        write(6,*) 'MOLID ',molid,imolid
@@ -4150,23 +4152,23 @@ c        write(6,*) data(1:55),' In Character:',cda(nresid),' in num',ird
        subroutine hypothesis(atmnam,resn,chan,nores,posins,xa,
      1 ya,za,ocp,npoorat,inscode)
 
-       character*1 posins,pos(100000),tmppos,inscode,tmpins,allins
+       character*1 posins,pos(900000),tmppos,inscode,tmpins,allins
        character*4 CHAIND,chan,pcd,chainid,pchaind,molid
        character*3 adevar,guavar,cytvar,uravar,resn,resid,RESD
 	common/local/chainid
        character*4 atmnam,NAMED
        integer nores,atgc,presd,prd
        real xa,ya,za,ocp
-       COMMON /NAMES/NAMED(9000000),RESD(9000000)
-       COMMON /CHAINS/CHAIND(9000000)
-       common /occur/occ(9000000)
-       COMMON /ALPHA/XD(9000000),YD(9000000),ZD(9000000)
-       COMMON /BETA/IRESD(9000000),ISTS(1000000),IENS(1000000),nres,
+       COMMON /NAMES/NAMED(900000),RESD(900000)
+       COMMON /CHAINS/CHAIND(900000)
+       common /occur/occ(900000)
+       COMMON /ALPHA/XD(900000),YD(900000),ZD(900000)
+       COMMON /BETA/IRESD(900000),ISTS(1000000),IENS(1000000),nres,
      1     allins(1000000),nforce,navar,ngvar,ncvar,nuvar,mresd(1000000)
        COMMON /GAMA/ATGC(1000000)
        COMMON /DELTA/l,lresno
        COMMON /DELTAD/tmppos,tmpins
-       common /residue/resid(9000000)
+       common /residue/resid(900000)
        common /num/kresd(1000000),prd(1000000)
        common /cum/pchaind(1000000),pcd(1000000),molid
        common /basenms/adevar(200),guavar(200),cytvar(200),uravar(200)
@@ -4286,7 +4288,7 @@ c     1 ya,za,ocp,':',l,':',iresd(l),':',lresno,':'
         subroutine renbase(bs,base)
         character*3 bs,adevar,guavar,cytvar,uravar
         character*1 base,allins
-       COMMON /BETA/IRESD(9000000),ISTS(1000000),IENS(1000000),nres,
+       COMMON /BETA/IRESD(900000),ISTS(1000000),IENS(1000000),nres,
      1   allins(1000000),nforce,navar,ngvar,ncvar,nuvar,mresd(1000000)
        common /basenms/adevar(200),guavar(200),cytvar(200),uravar(200)
 
@@ -4315,9 +4317,9 @@ c     1 ya,za,ocp,':',l,':',iresd(l),':',lresno,':'
         character*4 named
         character*3 resd
         character*1 allins
-       COMMON /NAMES/NAMED(9000000),RESD(9000000)
-       COMMON /ALPHA/XD(9000000),YD(9000000),ZD(9000000)
-       COMMON /BETA/IRESD(9000000),ISTS(1000000),IENS(1000000),nres,
+       COMMON /NAMES/NAMED(900000),RESD(900000)
+       COMMON /ALPHA/XD(900000),YD(900000),ZD(900000)
+       COMMON /BETA/IRESD(900000),ISTS(1000000),IENS(1000000),nres,
      1   allins(1000000),nforce,navar,ngvar,ncvar,nuvar,mresd(1000000)
         do k=ists(i),iens(i)
           if(named(k).eq.'C1* ') then

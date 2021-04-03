@@ -131,10 +131,12 @@ namespace OvlpGen {
 
       //enum OvlpAtomVariant {C1_p=1,C2,C4,C5,C6,C8,N1,N2,N3,N4,N6,N7,N9,O2,O4,O6};
 }
+#define METHOD_OVERLAP 0
+#define METHOD_C1PC1P  1
 
 
 namespace OvlpParameters {
-      const std::string file_version = "00.00.02";
+      const std::string file_version = "01.00.02";
       std::string pdb_accn="";
       const double rad_tolerance   = 0.20;
 
@@ -150,9 +152,10 @@ namespace OvlpParameters {
       const OvlpAtomType valid_atoms[] = {Carbon,Nitrogen,Oxygen};
 
       const double epsilon = 0.0001;
-      const int dots_per_angstrom_sqr  = 30;
-      const int cluster_cardinality    = 300;
+      const int dots_per_angstrom_sqr  = 10;
+      const int cluster_cardinality    = 50;
       double ovlp_cutoff = 0.0001;
+      int proximity_method = 0; // 0 for 
 };
 
 bool Ovlp_is_equal_radius(double x,double y){
@@ -416,6 +419,13 @@ public:
             }
             return "NOT_FOUND";
       }
+      char get_ins(){
+	    if(strlen(mInsCode.c_str()) > 1){
+		  fprintf(stderr, "Error.... Ins code is of multiple characters\n");
+		  exit(EXIT_FAILURE);
+	    }
+	    return mInsCode.at(0);
+      }
 
       std::string get_pair_type(int from_cor_serial, int to_cor_srtial){
             assert(from_cor_serial == mCorBaseSerial);
@@ -580,10 +590,12 @@ public:
       int base1;
       int base1_pdb;
       std::string base1_name;
+      char base1_ins;
       std::string base1_chain;
       int base2;
       int base2_pdb;
       std::string base2_name;
+      char base2_ins;
       std::string base2_chain;
       std::string pair_name;
       std::string pair_type;
@@ -591,8 +603,8 @@ public:
       ~OvlpFileData(){
             cout<<"OvlpFileData deleted"<<endl;
       }
-      OvlpFileData(int base1,int base1_pdb,std::string base1_name,std::string base1_chain,
-               int base2,int base2_pdb,std::string base2_name,std::string base2_chain,
+      OvlpFileData(int base1,int base1_pdb,std::string base1_name, char base1_ins, std::string base1_chain,
+               int base2,int base2_pdb,std::string base2_name, char base2_ins, std::string base2_chain,
                std::string pair_name,
                std::string pair_type,
                double overlap
@@ -600,11 +612,13 @@ public:
             this->base1         = base1;
             this->base1_pdb     = base1_pdb;
             this->base1_name    = base1_name;
+	    this->base1_ins     = base1_ins;
             this->base1_chain   = base1_chain;
 
             this->base2         = base2;
             this->base2_pdb     = base2_pdb;
             this->base2_name    = base2_name;
+	    this->base2_ins     = base2_ins;
             this->base2_chain   = base2_chain;
             this->pair_name     = pair_name;
             this->pair_type     = pair_type;
@@ -615,11 +629,13 @@ public:
 
       }
       void fprint(FILE* fp){
-            fprintf(fp,"OVLP    %6d:%-6d  %6d:%-6d   %3s:%-3s   %3s-%-3s  %4s  %2s  : %8.2lf",
+            fprintf(fp,"OVLP    %6d:%-6d  %c %6d:%-6d %c   %3s:%-3s   %3s-%-3s  %4s  %2s  : %8.2lf",
                     base1,
                     base2,
+		    base1_ins,
                     base1_pdb,
                     base2_pdb,
+		    base2_ins,
                     base1_name.c_str(),
                     base2_name.c_str(),
                     base1_chain.c_str(),
@@ -660,7 +676,7 @@ public:
 
 
 class OvlpPoint3D {
-protected:
+public:
       double x;
       double y;
       double z;
@@ -704,7 +720,7 @@ public:
 };
 
 class OvlpSphere :public OvlpPoint3D {
-protected:
+public:
       double r;
 public:
       OvlpSphere(double x, double y, double z, double r): OvlpPoint3D(x,y,z) {
@@ -1010,7 +1026,7 @@ public:
       }
       OverlapAtom(int serial, std::string atom_name, double x, double y, double z ): OvlpSphere(x, y, z, (double)0.0){
 	    /* This constructor has been developed on January 2021 for all base proximity
-	     * detection. The idea has been introduced by Bhananjay Bhattacharyya
+	     * detection. The idea has been introduced by Dhananjay Bhattacharyya
 	     * from one of the paper of Sudip Kundu. "BMC Bioinformatics 2012, 13:142"
 	     */
             this->serial        = serial;
@@ -1311,7 +1327,7 @@ public:
             ;//cout<<"OvlpSurfaceDataFile Deleted"<<endl;
       }
       OvlpSurfaceDataFile(std::string file_name, OvlpAtomType atom_type[],int num_basic_atoms){
-            file_name = file_name+"/surface.xyz";
+            file_name = file_name+"/surface_10.xyz";
             this->file_name      = file_name;
             this->file_base      = file_name.substr(0, file_name.find_last_of("."));
             this->file_ext       = file_name.substr(file_name.find_last_of(".") + 1, file_name.length());
@@ -1415,7 +1431,7 @@ private:
       int total_points;
       int actual_surface_points;
 public:
-      OverlapAtom* c1_p;
+      OverlapAtom c1_p =OverlapAtom(-1,"C1*", 0.0, 0.0, 0.0);
       OverlapAtom* c2;
       OverlapAtom* c5;
 public:
@@ -1528,7 +1544,9 @@ public:
             this->nucleobase    = nucleo_base;
             this->num_atom      = AtomStack->get_no_elements();
             this->AtomArray     = new OverlapAtom *[num_atom];
-	    c1_p = NULL;
+	    c1_p.x = 0.0;
+	    c1_p.y = 0.0;
+	    c1_p.z = 0.0;
 	    c2 = NULL;
 	    c5 = NULL; 
             double x_min        =  9999999.0;
@@ -1543,9 +1561,7 @@ public:
 
             for(int i=num_atom-1;i>=0;i--){
                   AtomArray[i] = AtomStack->pop();
-		  if(AtomArray[i]->get_atom_name() == "C6"){
-			c1_p = AtomArray[i];
-		  }else if(AtomArray[i]->get_atom_name() == "C2"){
+		  if(AtomArray[i]->get_atom_name() == "C2"){
 			c2 = AtomArray[i];
 		  }else if(AtomArray[i]->get_atom_name() == "C5"){
 			c5 = AtomArray[i];
@@ -1560,14 +1576,66 @@ public:
                   if(AtomArray[i]->getZ()>z_max) z_max = AtomArray[i]->getZ();
             }
             this->center_of_mass = new OvlpPoint3D( (x_min+x_max)/2.0,(y_min+y_max)/2.0,(z_min+z_max)/2.0);
-	    if(c1_p == NULL || c2 == NULL || c5 == NULL){
-		  fprintf(stderr, "Error... c1p or c2 or c5 not found inresidue no %d\n", residue_no);
+	    if(c2 == NULL || c5 == NULL){
+		  fprintf(stderr, "Error... c2 or c5 not found inresidue no %d\n", residue_no);
 		  exit(EXIT_FAILURE);
 	    }
 	    getplane3d(&PlaneA, &PlaneB, &PlaneC, &PlaneD, 
-			c1_p->getX(),
-		        c1_p->getY(),
-		        c1_p->getZ(),
+			c1_p.getX(),
+		        c1_p.getY(),
+		        c1_p.getZ(),
+		        c2->getX(),
+		        c2->getY(),
+		        c2->getZ(),
+		        c5->getX(),
+			c5->getY(),
+			c5->getZ());     
+      }
+      OverlapResidueClass(int residue_number, std::string nucleo_base, OverlapStack<OverlapAtom *> *AtomStack, OverlapAtom c1prime){ // This constructor is non-conventional. This is created because atoms are first placed in a stack when created.
+            this->residue_no    = residue_number;                                              // But this is the only way one can create a residue class.
+            this->nucleobase    = nucleo_base;
+            this->num_atom      = AtomStack->get_no_elements();
+            this->AtomArray     = new OverlapAtom *[num_atom];
+	    c1_p.x = c1prime.x;
+	    c1_p.y = c1prime.y;
+	    c1_p.z = c1prime.z;
+	    c2 = NULL;
+	    c5 = NULL; 
+            double x_min        =  9999999.0;
+            double x_max        = -9999999.0;
+            double y_min        =  9999999.0;
+            double y_max        = -9999999.0;
+            double z_min        =  9999999.0;
+            double z_max        = -9999999.0;
+
+
+
+
+            for(int i=num_atom-1;i>=0;i--){
+                  AtomArray[i] = AtomStack->pop();
+		  if(AtomArray[i]->get_atom_name() == "C2"){
+			c2 = AtomArray[i];
+		  }else if(AtomArray[i]->get_atom_name() == "C5"){
+			c5 = AtomArray[i];
+		  }
+                  if(AtomArray[i]->getX()<x_min) x_min = AtomArray[i]->getX();
+                  if(AtomArray[i]->getX()>x_max) x_max = AtomArray[i]->getX();
+
+                  if(AtomArray[i]->getY()<y_min) y_min = AtomArray[i]->getY();
+                  if(AtomArray[i]->getY()>y_max) y_max = AtomArray[i]->getY();
+
+                  if(AtomArray[i]->getZ()<z_min) z_min = AtomArray[i]->getZ();
+                  if(AtomArray[i]->getZ()>z_max) z_max = AtomArray[i]->getZ();
+            }
+            this->center_of_mass = new OvlpPoint3D( (x_min+x_max)/2.0,(y_min+y_max)/2.0,(z_min+z_max)/2.0);
+	    if(c2 == NULL || c5 == NULL){
+		  fprintf(stderr, "Error... c2 or c5 not found inresidue no %d\n", residue_no);
+		  exit(EXIT_FAILURE);
+	    }
+	    getplane3d(&PlaneA, &PlaneB, &PlaneC, &PlaneD, 
+			c1_p.getX(),
+		        c1_p.getY(),
+		        c1_p.getZ(),
 		        c2->getX(),
 		        c2->getY(),
 		        c2->getZ(),
@@ -1604,6 +1672,17 @@ public:
         }
         this->center_of_mass = new OvlpPoint3D( (x_min+x_max)/2.0,(y_min+y_max)/2.0,(z_min+z_max)/2.0);
     }*/
+      double compute_overlapped_c1p_c1pdist(OverlapResidueClass* res){
+            for(int i=0;i<this->num_atom;i++){
+                  for(int j=0;j<res->num_atom;j++){
+                        if(this->AtomArray[i]->isIntersecting(res->AtomArray[j])){
+			      return this->c1_p.dist(&res->c1_p);
+			}
+                  }
+            }
+	    return 9999.0;
+
+      }
       double compute_overlap(OverlapResidueClass * res){
             int tot_pts;
             int surf_pts;
@@ -2208,7 +2287,7 @@ public:
 		  fprintf(gpfp,"%d ", i+1);
 		  for(int j=0; j<num_residues; ++j){
 			res2 = residue_bases[j];
-			dist = (int)res1->c1_p->dist(res2->c1_p);
+			dist = (int)res1->c1_p.dist(&res2->c1_p);
 			fprintf(gpfp, ",%d", dist);
 
 
@@ -2243,6 +2322,7 @@ public:
 		  resiptr1 = residue_bases[i];
 		  std::string chn = mOutArray->mOutFileRowArray[i]->get_chain_name();
 		  int flag =0;
+
 		  for(int i=0; i<stat->chncnt; ++i){
 			if(chn == stat->chain[i]){
 			      flag = 1;
@@ -2268,11 +2348,14 @@ public:
 			 * is essential*/
 			resiptr2 = residue_bases[j];
 			if(resiptr1->is_in_proximity(resiptr2, dist, atom1, atom2, &actdist) == true){
-			      fprintf(fp, "PROX    %6d:%-6d  %6d:%-6d   %3s:%-3s   %3s-%-3s %4s:%-4s PX  :   %5.2lf\n",
+			      fprintf(fp, "PROX    %6d:%-6d  %c %6d:%-6d %c   %3s:%-3s   %3s-%-3s %4s:%-4s PX  :   %5.2lf\n",
 					  mOutArray->mOutFileRowArray[i]->get_cor_serial(),
 					  mOutArray->mOutFileRowArray[j]->get_cor_serial(),
+					  mOutArray->mOutFileRowArray[i]->get_ins(),
 					  mOutArray->mOutFileRowArray[i]->get_pdb_serial(),
+					  
 					  mOutArray->mOutFileRowArray[j]->get_pdb_serial(),
+					  mOutArray->mOutFileRowArray[j]->get_ins(),
 					  mOutArray->mOutFileRowArray[i]->get_base_name().c_str(),
 					  mOutArray->mOutFileRowArray[j]->get_base_name().c_str(),
 					  mOutArray->mOutFileRowArray[i]->get_chain_name().c_str(),
@@ -2286,7 +2369,7 @@ public:
 
 	    }
 	    fclose(fp);
-	    printf("totak chains found: %d\n", stat->chncnt);
+	    printf("Total Chains found: %d\n", stat->chncnt);
 	    for(int i=0; i<stat->chncnt; ++i){
 		  printf("CHN: %s MIN: %4d, MAX:%4d\n", stat->chain[i].c_str(), stat->chnmin[i], stat->chnmax[i]);
 	    }
@@ -2337,17 +2420,22 @@ public:
                   //cout<<i<<" of "<<num_residues<<" Started"<<endl;
 //cout<<"A2 i="<<i<<endl;//", j="<<j<<endl;
                   for(int j=i+1;j<this->num_residues;j++){
-                        result = residue_bases[i]->compute_overlap(residue_bases[j]);
+			if(OvlpParameters::proximity_method == METHOD_OVERLAP){
+			      result = residue_bases[i]->compute_overlap(residue_bases[j]);
+			}else{
+			      result = residue_bases[i]->compute_overlapped_c1p_c1pdist(residue_bases[j]);
+			}
                         //cout<<"RESULT "<<result<<endl;
 
 
-                        if(result > OvlpParameters::ovlp_cutoff){
+                        if((OvlpParameters::proximity_method == METHOD_OVERLAP && result > OvlpParameters::ovlp_cutoff) ||
+		           (OvlpParameters::proximity_method == METHOD_C1PC1P && result < 9999.0-0.1 && result < 9999.0-0.1 && result < 9999.0-0.1 && result < 9999.0-0.1 && result < 9999.0-0.1 && result < 9999.0-0.1 && result < 9999.0-0.1)){
                               std::string base1_atom_names[30];
                               std::string base2_atom_names[30];
                               int num_atom_base1 = 0;
                               int num_atom_base2 = 0;
                               bool check = residue_bases[i]->get_atom_overlap_mapping_atoms(residue_bases[j], base1_atom_names, &num_atom_base1, base2_atom_names, &num_atom_base2);
-                              if(check == false){
+                              if(check == false && OvlpParameters::proximity_method == METHOD_OVERLAP){
                                     cout<<"No overlapping in atoms... please contact developers..."<<endl;
                                     exit(1);
                               }
@@ -2422,10 +2510,12 @@ public:
                               OvlpFileData * fdata = new OvlpFileData( this->residue_bases[i]->get_residue_number(),
                                                               row_i->get_pdb_serial(),
                                                               this->residue_bases[i]->get_nucleobase().c_str(),
+							      row_i->get_ins(),
                                                               chain_name_i,
                                                               this->residue_bases[j]->get_residue_number(),
                                                               row_j->get_pdb_serial(),
                                                               this->residue_bases[j]->get_nucleobase(),
+							      row_j->get_ins(),
                                                               chain_name_j,
                                                               base_name,
                                                               tmp_base_type,
@@ -2559,7 +2649,7 @@ class OvlpRNA_NucVatiants {
                         break;
                   }
             }
-            rna_file.seekg(18, ios_base::cur); // Go to the chain position in the text file.
+            rna_file.seekg(17, ios_base::cur); // Go to the chain position in the text file.
             rna_file>>curr_residue_name;
             rna_file>>*curr_res_no;
 
@@ -2780,6 +2870,12 @@ public:
 	    line[16] = ' ';
             sscanf(line.c_str(),"%s%d%s%s%d%lf%lf%lf%lf",tag,&atom_serial,atom_type,
                    residue_name,&residue_no,&x,&y,&z,&occupancy);
+	    OverlapAtom c1prime = OverlapAtom(-1,"C1*", 0.0, 0.0, 0.0);
+	    if(strcmp(atom_type, "C1*") == 0){
+		  c1prime.x = x;
+		  c1prime.y = y;
+		  c1prime.z = z;
+	    }
             OvlpAtomType atomtype = get_atom_base_type(atom_type);
             while(line != ter){
                   assert(StackOfAtom.isEmpty());
@@ -2804,6 +2900,12 @@ public:
                         sscanf(line.c_str(),"%s%d%s%s%d%lf%lf%lf%lf",tag,&atom_serial,atom_type,
                                residue_name,&residue_no,&x,&y,&z,&occupancy);
                         atomtype = get_atom_base_type(atom_type);
+			if(strcmp(atom_type, "C1*") == 0){
+			      c1prime.x = x;
+			      c1prime.y = y;
+			      c1prime.z = z;
+			}
+
 
                         if(line == ter){
                               //cout<<"TTTT"<<line<<"BBBB"<<endl;
@@ -2813,7 +2915,8 @@ public:
                   }
                   //OverlapResidueClass* residue = new OverlapResidueClass(curr_residue_no,get_nitrogenous_base(curr_residue_name),&StackOfAtom);
                   //cout<<"CURR RES"<<curr_residue_no<<" , "<<curr_residue_name<<", RES NO"<<residue_no<<endl;
-                  OverlapResidueClass * residue = new OverlapResidueClass(curr_residue_no,curr_residue_name,&StackOfAtom);
+
+                  OverlapResidueClass * residue = new OverlapResidueClass(curr_residue_no,curr_residue_name,&StackOfAtom, c1prime);
 
 
                   StackOfResidue.push(residue);
@@ -3043,8 +3146,12 @@ OvlpRNA_All_Residues* ovlp_base_overlap_comp(string pdb_accn, double ovlp_cutoff
       nucVariants->set_rna(cor_file);
       OvlpRNA_All_Residues* rna = nucVariants->get_rna_data_structures(all_surf_points,out_file);
 
-      rna->calc_all_surface();
-      rna->calc_all_overlap();
+      if(OvlpParameters::proximity_method == METHOD_OVERLAP){
+	    rna->calc_all_surface();
+	    rna->calc_all_overlap();
+      }else{
+	    rna->calc_all_overlap();
+      }
       const string robfile = pdb_accn + ".rob";
       FILE* fp = fopen(robfile.c_str(),"w");
       rna->write_overlap_to_file(fp);
@@ -3236,6 +3343,10 @@ void overlap_gen_contact_map(int numres, string dirname, string accn, ovlp_stat*
 	    prxtoken = strtok(NULL, sep);
 	    prxtoken = strtok(NULL, sep);
 	    prxtoken = strtok(NULL, sep);
+	    prxtoken = strtok(NULL, sep);
+	    prxtoken = strtok(NULL, sep);
+	    prxtoken = strtok(NULL, sep);
+	    prxtoken = strtok(NULL, sep);
 
 
 	    prxtoken = strtok(NULL, sep);
@@ -3265,6 +3376,8 @@ void overlap_gen_contact_map(int numres, string dirname, string accn, ovlp_stat*
 	    robtoken = strtok(NULL, "\t :\n");
             col = atoi(robtoken);
 	    col --;
+	    robtoken = strtok(NULL, sep);
+	    robtoken = strtok(NULL, sep);
 	    robtoken = strtok(NULL, sep);
 	    robtoken = strtok(NULL, sep);
 	    strcpy(bpname, robtoken);
