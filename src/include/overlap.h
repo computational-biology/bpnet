@@ -11,6 +11,7 @@
 #include <cstdlib>
 #include <cstdio>
 #include <sstream>
+#include <postscript.h>
 
 
 //#include <set>
@@ -3279,6 +3280,94 @@ void gen_all_contact_bpseq(string dirname, string accn, int** matrix, int numres
 }
 
 
+      void gen_post_script(int** mat, int size){
+	    FILE* gpfp = fopen("test.ps", "w");
+	    if(gpfp == NULL){    /* Exception Handling */ 
+		  fprintf(stderr, "Error in function %s()... Unable to open file. (FILE:%s, LINE:%d)\n",__func__,  __FILE__, __LINE__);
+		  exit(EXIT_FAILURE);
+	    }
+	    int charcnt = 0;
+	    const int maxchar=78;
+	    unsigned char binary[4];
+	    unsigned char data[8];
+	    char asc85[6]; 
+	    unsigned char dist;
+	    int cnt = 0;
+	    int asclen = 0;
+	    for(int i=0; i<8; ++i){
+		  data[i] = 1;
+	    }
+	    printf("%d reseise\n", size);
+	    for(int i=size-1; i>=0;  --i){
+		  for(int j=0; j<size; ++j){
+			dist = mat[i][j];
+
+			if(cnt<8){
+			      data[cnt] = (unsigned char)dist;
+			      cnt ++;
+			}else{
+			      cnt = 0;
+			      tobinary(binary, data, 4);
+			      toascii85(asc85, &asclen, binary, 4);
+			      asc85[asclen] = '\0';
+			      for(int k=0; k<8; ++k){
+				    data[k] = 1;
+			      }
+			      data[cnt] = (unsigned char)dist;
+			      cnt ++;
+			      if(charcnt + asclen < maxchar){
+				    fprintf(gpfp,"%s", asc85);
+				    charcnt += asclen;
+
+			      }else{
+				    for(int k=0; k<asclen; ++k){
+					  if(charcnt == maxchar){
+						fprintf(gpfp, "\n");
+						charcnt = 0;
+					  }
+					  fprintf(gpfp, "%c", asc85[k]);
+					  charcnt ++;
+				    }
+			      }
+
+
+
+			}
+
+
+
+		  }
+	    }
+
+	    if(cnt != 0){
+		  printf("entered here\n");
+		  tobinary(binary, data, 4);
+		  toascii85(asc85, &asclen, binary, 4);
+		  asc85[asclen] = '\0';
+
+	    }
+	    if(charcnt + asclen < maxchar){
+		  fprintf(gpfp,"%s", asc85);
+
+	    }else{
+		  for(int k=0; k<asclen; ++k){
+			if(charcnt == maxchar){
+			      fprintf(gpfp, "\n");
+			      charcnt = 0;
+			}
+			fprintf(gpfp, "%c", asc85[k]);
+			charcnt ++;
+		  }
+	    }
+
+	    
+			fprintf(gpfp, "EOD\n");
+			fprintf(gpfp,"set datafile separator comma\n");
+			fprintf(gpfp,"plot '$mapdata' matrix rowheaders columnheaders using 1:2:3 with image\n");
+			fprintf(gpfp,"set datafile separator\n");
+
+			fclose(gpfp);
+      }
 void overlap_gen_contact_map(int numres, string dirname, string accn, ovlp_stat* stat,
 	    OvlpRNA_All_Residues* rna){
       std::string pdb_accn = dirname+accn;
@@ -3504,9 +3593,18 @@ void overlap_gen_contact_map(int numres, string dirname, string accn, ovlp_stat*
       }
       fprintf(gpfp, "EOD\n");
 
+
+
       fprintf(gpfp,"set datafile separator comma\n");
       fprintf(gpfp,"plot '$mapdata' matrix rowheaders columnheaders using 1:2:3 with image\n");
       fprintf(gpfp,"set datafile separator\n");
+
+//      gen_post_script(mat, numres);
+
+
+      char accnno[20];
+      strcpy(accnno, accn.c_str());
+      ps_create_heatmap((pdb_accn+"_test.ps").c_str(), accnno, mat, numres);
 
       fclose(gpfp);
       fclose(robfp);
