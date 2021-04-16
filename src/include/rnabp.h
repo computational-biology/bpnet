@@ -242,12 +242,12 @@ void print_compo_edge_info(struct nucbp* self, struct graph* g,
       int v2=vertex;
       int* array = (int*) malloc (comp_size * sizeof(int));
       djset_sort(set, vertex, array);
-      for(int i=0; i<comp_size; ++i){
-	    fprintf(file_adj, "%d, ",array[i]);
-      }
+//      for(int i=0; i<comp_size; ++i){
+//	    fprintf(file_adj, "%d, ",array[i]);
+//      }
       fprintf(file_adj, "\n");
-      fprintf(file_adj, "HEAD    SL    SL  EDG-TYPE      WT  SP  TYP  RES    CHN  RES    CHN  BS  BS\n");
-      fprintf(file_adj, "        --    --  --------      --  --  ---  ---    ---  ---    ---  --  --\n");
+      fprintf(file_adj, "HEAD    SL    SL DEG  EDG-TYPE      WT  SP  TYP  RES    CHN  RES    CHN  BS  BS\n");
+      fprintf(file_adj, "        --    -- ---  --------      --  --  ---  ---    ---  ---    ---  --  --\n");
 
       for(int i=0; i<comp_size; ++i){
 	    v1 = array[i];
@@ -279,10 +279,12 @@ void print_compo_edge_info(struct nucbp* self, struct graph* g,
 
 		  string bpname = self[v1].name[index];
 		  double enerval = graph_get_wt(g, v1, index); 
-		  fprintf(file_adj, "EDGE %5d %5d  %c:%c-%4s %8.2lf %c:%c %s %5d%2s %3s %5d%2s %3s %3s "
+		  int deg = graph_deg(g, v2);
+		  fprintf(file_adj, "EDGE %5d %5d  %2d  %c:%c-%4s %8.2lf %c:%c %s %5d%2s %3s %5d%2s %3s %3s "
 			      "%3s\n",
 			      v1+1, 
 			      v2+1,
+			      deg,
 			      self[v1].resclass,
 			      self[v2].resclass,
 			      bpname.c_str(),
@@ -418,12 +420,13 @@ void print_adjinfo(struct nucbp* self, int nres, struct djset* set,
 	    int num_exdeg = 0;
 	    for(int j=0; j<comp_size; ++j){
 		  check[pos] = 1;
-		  if(syspar->_exdeg == graph_deg(g, i)){
+		  if(syspar->_exdeg == graph_deg(g, pos)){
 			exdeg = 1;
 			num_exdeg ++;
 		  }
 		  pos = djset_next(set, pos);
 	    }
+	    printf("exdeg=%d, numexdeg=%d, compsize=%d, cicles=%d\n", exdeg, num_exdeg, comp_size, cycles);
 	    if(exdeg == 0) continue;
 	    if(num_exdeg < syspar->_num_exdeg) continue;
 	    if(comp_size < syspar->_from_size || comp_size > syspar->_to_size) continue;

@@ -36,7 +36,8 @@ C
 
 
        subroutine callbpfindc(cif , accn, ht, hd, 
-     1 hdval, ang, angval, ch, sg, cor)bind(c, name ='callbpfindc')
+     1 hdval, ang, angval, ch, sg, 
+     2 cor, eval)bind(c, name ='callbpfindc')
        use iso_c_binding, only: c_char , c_null_char
 C       character(kind=c_char), dimension(*), intent(in)    ::  argv
 C       character(kind=c_char), intent(in) ::  a1(20), a2(20)
@@ -50,6 +51,7 @@ C       character(kind=c_char), intent(in) ::  a1(20), a2(20)
        character(kind=c_char,len=1),dimension(512),intent(in) ::ch
        character(kind=c_char,len=1),dimension(512),intent(in) ::sg
        character(kind=c_char,len=1),dimension(512),intent(in) ::cor
+       character(kind=c_char,len=1),dimension(512),intent(in) ::eval
         ! here I have a string with fixed length
         character*512 val1(50)
         character (len=512) ::params
@@ -247,6 +249,25 @@ c       write(*,*) params
         end if
 
 
+
+
+
+        params = "";  
+        loop_eval: do i=1, 512
+        if ( eval(i) == c_null_char ) then
+              exit loop_eval
+        else
+              params (i:i) = eval(i)
+        end if
+        end do loop_eval
+
+
+        if(params.ne.'-dummyval') then
+              narg = narg + 1
+            val1(narg) = params
+        end if
+
+
         narg = narg + 1
         val1(narg) = "-NONUP"
 
@@ -268,8 +289,8 @@ c       write(*,*) params
 
 
 
-        narg = narg + 1
-        val1(narg) = "-c1"
+c        narg = narg + 1
+c        val1(narg) = "-c1"
 
         
 

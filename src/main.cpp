@@ -34,7 +34,7 @@
 
 //#include <libpfind.h>
 
-extern "C" void callbpfindc(char [],  char [], char [], char [], char [], char [], char [], char [], char [], char []);
+extern "C" void callbpfindc(char [],  char [], char [], char [], char [], char [], char [], char [], char [], char [], char []);
 using namespace std;
 // using namespace boost;
 
@@ -593,6 +593,90 @@ fprintf(adj_file, "+============================================================
     cout<<"----------------------------------------------"<<endl<<endl;
 }
 
+    void gen_pymol(struct nucbp* nbp, struct djset* set, 
+		const char* pmlfile, sysparams* syspar, int iscif){
+	    
+	    char color[30][10] = {"red", "purple","green", "blue","orange", "white"};
+	    int numcolor = 6;
+	    int n = set->numset;
+	    if(n == 0) return;
+	    FILE* fp = fopen(pmlfile, "w");
+	    assert(fp != NULL);
+	    //fp = stdout;
+	    if(iscif == 1){
+		  fprintf(fp,"load %s.cif\n",syspar->accn.c_str());
+	    }else{
+		  fprintf(fp,"load %s_rna.pdb\n",syspar->accn.c_str());
+	    }
+	    int* visited = (int*) malloc (set->size * sizeof(int));
+	    for(int i=0; i<set->size; ++i){
+		  visited[i] = 0;
+	    }
+
+	    for (int i = 0; i < set->size; ++i) {
+		  int vertex = i;
+		    if(visited[vertex] == 1) continue;
+		    int comp_size = djset_composize(set, vertex);
+		    for(int j=0; j<comp_size; ++j){
+			  visited[vertex] = 1;
+			  vertex = djset_next(set, vertex);
+		    }
+		    if(comp_size < syspar->_from_size || comp_size > syspar->_to_size) continue; 
+		    fprintf(fp, "select comp%d, ", vertex+1);
+		    for(int j=0; j<comp_size; ++j){
+			  if(iscif == 1){
+				fprintf(fp, "(resi %d and chain %s) ", nbp[vertex].cifid, nbp[vertex].chain);
+			  }else{
+				fprintf(fp, "resi %d ", vertex + 1);
+			  }		
+			  vertex = djset_next(set, vertex);
+		    }
+		    fprintf(fp,"\n");
+		    fprintf(fp, "color %s, comp%d\n", color[i%numcolor], vertex+1);
+		    fprintf(fp, "show  spheres, comp%d\n", vertex+1);
+		    fprintf(fp,"\n");
+	    }
+	    free(visited);
+	    fprintf(fp,"sele sugbackbone, name P+OP1+OP2+O5*+C5*+C4*+O4*+C3*+O3*+C2*+O2*\n"); 
+	    fprintf(fp,"hide spheres, sugbackbone\n");
+
+	    fclose(fp);
+    }
+//    void gen_pymol_cor(const char* pymolpml, sysparams* syspar){
+//	    char color[30][10] = {"red", "purple","green", "blue","orange", "white"};
+//	    int numcolor = 6;
+//	    int n = num_components();
+//	    if(n == 0) return;
+//	    FILE* fp = fopen(pymolpml, "w");
+//	    assert(fp != NULL);
+//	    //fp = stdout;
+//	    fprintf(fp,"load %s_rna.pdb\n",syspar->accn.c_str());
+//	    for (int i = 0; i < n; ++i) {
+//		    vector<int> component = all_components.at(i);
+//		    int comp_size = (int) component.size();
+//		    if(comp_size < syspar->_from_size || comp_size > syspar->_to_size) continue; 
+//		    if(comp_size == 1 && syspar->is_overlap == "TRUE"){
+//			    fprintf(stderr, "Worning... In overlap mode an isolated vertex found\n");
+//		    } 
+//		    //if(comp_size == 1) continue;
+//		    int v = component.at(0);
+//		    fprintf(fp, "select comp%d, ",v+1);
+//		    fprintf(fp, "resi %d", v+1);
+//		    for(int j=1; j<comp_size; ++j){
+//			    int v1 = component.at(j);
+//			    fprintf(fp, "+%d", v1+1);
+//		    }
+//		    fprintf(fp,"\n");
+//		    fprintf(fp, "color %s, comp%d\n", color[i%numcolor], v+1);
+//		    fprintf(fp, "show  spheres, comp%d\n", v+1);
+//		    fprintf(fp,"\n");
+//	    }
+//	    fprintf(fp,"show cartoon\n");
+//	    fprintf(fp,"sele sugbackbone, name P+OP1+OP2+O5*+C5*+C4*+O4*+C3*+O3*+C2*+O2*\n"); 
+//	    fprintf(fp,"hide spheres, sugbackbone\n");
+//
+//	    fclose(fp);
+//    }
 
 
 void show_help(){
@@ -651,6 +735,8 @@ int main(int argc, char* argv[]) {
 	      strcpy(syspar.chparam, "-CH");
 	}else if(arg.substr(0,13)=="-hetatm=false"){
 	      strcpy(syspar.htparam, "-dummyval");
+	}else if(arg.substr(0, 10) =="-eval=true"){
+	      strcpy(syspar.evaltypeparam, "-dummyval");
 	}
 
 
@@ -672,7 +758,6 @@ int main(int argc, char* argv[]) {
 	}else if(arg.substr(0,10) == "-cifpymol="){
 		if(arg.substr(10,4) == "true"){
 			syspar.cifpymol = "TRUE";
-			syspar.corpymol = "FALSE";
 		}else if(arg.substr(10,5) == "false"){
 			syspar.cifpymol = "FALSE";
 		}else{
@@ -682,7 +767,6 @@ int main(int argc, char* argv[]) {
 	}else if(arg.substr(0,10) == "-rnapymol="){
 		if(arg.substr(10,4) == "true"){
 			syspar.corpymol = "TRUE";
-			syspar.cifpymol = "FALSE";
 		}else if(arg.substr(10,5) == "false"){
 			syspar.corpymol = "FALSE";
 		}else{
@@ -780,7 +864,7 @@ int main(int argc, char* argv[]) {
 		    callbpfindc(syspar.cifparam, syspar.accnparam, syspar.htparam, 
 				syspar.hdparam, syspar.hdvalparam, syspar.angparam, 
 				syspar.angvalparam, syspar.chparam, syspar.sgparam, 
-				syspar.corparam );
+				syspar.corparam, syspar.evaltypeparam );
 	      }
 
 	      string file_path = syspar.file_dir+syspar.accn+".out";
@@ -794,6 +878,9 @@ int main(int argc, char* argv[]) {
 		    continue;
 	      }
 	      if(syspar.overlap_flag == 0){
+		    int resinum;
+		    //ovlp_residue_all_prox_comp(syspar.file_dir+syspar.accn, 4.0, nucVariants_prox, &resinum, &stat);
+		    //overlap_gen_contact_map_for_base_pair(resinum, syspar.file_dir, syspar.accn, &stat);
 		    struct graph g;
 		    struct djset set;
 		    struct nucbp* nbp;
@@ -804,6 +891,20 @@ int main(int argc, char* argv[]) {
 		    djset_init(&set, ressize);
 		    graph_kruskal_component(&g, &set);
 		    print_adjinfo(nbp, ressize, &set, &ntvariants, &syspar, &g, &stat);
+
+
+		    int iscif = 0;
+		    string pymolfile;
+		    if(syspar.cifpymol == "TRUE"){
+			  iscif = 1;
+			  pymolfile = syspar.file_dir+syspar.accn+"_cif.pml";
+			  gen_pymol(nbp, &set, pymolfile.c_str(), &syspar, iscif);
+		    }
+		    if(syspar.corpymol == "TRUE"){
+			  iscif = 0;
+			  pymolfile = syspar.file_dir+syspar.accn+"_rna.pml";
+			  gen_pymol(nbp, &set, pymolfile.c_str(), &syspar, iscif);
+		    }
 
 		    graph_free(&g);
 		    djset_free(&set);
@@ -833,6 +934,19 @@ int main(int argc, char* argv[]) {
 		    djset_init(&set, ressize);
 		    graph_kruskal_component(&g, &set);
 		    print_adjinfo(nbp, ressize, &set, &ntvariants, &syspar, &g, &stat);
+
+		    int iscif = 0;
+		    string pymolfile;
+		    if(syspar.cifpymol == "TRUE"){
+			  iscif = 1;
+			  pymolfile = syspar.file_dir+syspar.accn+"_cif.pml";
+			  gen_pymol(nbp, &set, pymolfile.c_str(), &syspar, iscif);
+		    }
+		    if(syspar.corpymol == "TRUE"){
+			  iscif = 0;
+			  pymolfile = syspar.file_dir+syspar.accn+"_rna.pml";
+			  gen_pymol(nbp, &set, pymolfile.c_str(), &syspar, iscif);
+		    }
 
 		    graph_free(&g);
 		    djset_free(&set);

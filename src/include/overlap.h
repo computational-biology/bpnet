@@ -3368,6 +3368,242 @@ void gen_all_contact_bpseq(string dirname, string accn, int** matrix, int numres
 
 			fclose(gpfp);
       }
+void overlap_gen_contact_map_for_base_pair(int numres, string dirname, string accn, ovlp_stat* stat){
+      std::string pdb_accn = dirname+accn;
+      std::string robfile = pdb_accn+".rob";
+      std::string proxfile = pdb_accn+".rob";
+      std::string gpfile = pdb_accn+".gp";
+      std::string cmapfile = pdb_accn+".cmap";  //contact map
+      
+      FILE* proxfp = fopen(proxfile.c_str(), "r");
+      if(proxfp == NULL){    /* Exception Handling */ 
+	    fprintf(stderr, "Error in function %s() in %s at line %d... Unable to open file.\n", __func__, __FILE__, __LINE__);
+	    exit(EXIT_FAILURE);
+      }
+//      FILE* cmapfp = fopen(cmapfile, "w");
+//      if(cmapfp == NULL){    /* Exception Handling */ 
+//	    fprintf(stderr, "Error in function %s() in %s at line %d... Unable to open file.\n", __func__, __FILE__, __LINE__);
+//	    exit(EXIT_FAILURE);
+//      }
+
+      int** mat = (int**) malloc(numres*sizeof(int*));
+
+      for(int i=0; i<numres; ++i){
+	    mat[i] = (int*) malloc(numres*sizeof(int));
+      }
+      int flg =0;
+      for(int i=0; i<numres; ++i){
+	    for(int j=0; j<numres; ++j){
+		  mat[i][j] = 0;
+	    }
+      }
+      char lineprx[1024];
+      char linerob[1024];
+      //int numproxrow = 2000;
+      char  sep[] = "\t \n";
+      char * robtoken;
+      char * prxtoken;  
+      int row, col;
+      while(fgets(lineprx, 1024, proxfp) != NULL){
+	    prxtoken = strtok(lineprx, sep);
+	    if(strcmp(prxtoken, "PROX") != 0 ) continue;
+	    prxtoken = strtok(NULL, "\t :\n");
+            row = atoi(prxtoken);
+	    row --;
+	    prxtoken = strtok(NULL, "\t :\n");
+            col = atoi(prxtoken);
+	    col --;
+	    prxtoken = strtok(NULL, sep);
+	    prxtoken = strtok(NULL, sep);
+	    prxtoken = strtok(NULL, sep);
+	    prxtoken = strtok(NULL, sep);
+	    prxtoken = strtok(NULL, sep);
+	    prxtoken = strtok(NULL, sep);
+	    prxtoken = strtok(NULL, sep);
+
+
+	    prxtoken = strtok(NULL, sep);
+	    if(strcmp(prxtoken,"O3*:P")==0 || strcmp(prxtoken, "P:O3*")==0){
+		  mat[row][col] = 1;
+		  mat[col][row] = 1;
+	    }else{
+		  mat[row][col] = 7;
+		  mat[col][row] = 7;
+	    }
+      }
+      fclose(proxfp);
+      FILE* robfp = fopen(robfile.c_str(), "r");
+      if(robfp == NULL){    /* Exception Handling */ 
+	    fprintf(stderr, "Error in function %s() in %s at line %d... Unable to open file.\n", __func__, __FILE__, __LINE__);
+	    exit(EXIT_FAILURE);
+      }
+      char  basepair[100];
+      char  bpname[100];
+      char  bptype[100];
+      while(fgets(linerob, 1024, robfp) != NULL){
+	    robtoken = strtok(linerob, sep);
+	    if(strcmp(robtoken, "OVLP") != 0 ) continue;
+	    robtoken = strtok(NULL, "\t :\n");
+            row = atoi(robtoken);
+	    row --;
+	    robtoken = strtok(NULL, "\t :\n");
+            col = atoi(robtoken);
+	    col --;
+	    robtoken = strtok(NULL, sep);
+	    robtoken = strtok(NULL, sep);
+	    robtoken = strtok(NULL, sep);
+	    robtoken = strtok(NULL, sep);
+	    strcpy(bpname, robtoken);
+	    robtoken = strtok(NULL, sep);
+
+
+	    robtoken = strtok(NULL, sep);
+	    strcpy(basepair, robtoken);
+	    robtoken = strtok(NULL, sep);
+	    strcpy(bptype, robtoken);
+            if(strcmp(basepair,"ADJA")==0){
+		  mat[row][col] = 1;
+		  mat[col][row] = 1;
+		  stat->adjacnt ++;
+	    }else if(strcmp(basepair,"ASTK")==0){
+		  mat[row][col] = 2;
+		  mat[col][row] = 2;
+		  stat->astkcnt ++;
+	    }else if(strcmp(basepair,"CROS")==0){
+		  mat[row][col] = 3;
+		  mat[col][row] = 3;
+		  stat->croscnt ++;
+	    }else if(strcmp(basepair, "W:WC")==0 && 
+			(strcmp(bpname,"G:C")==0 ||
+			 strcmp(bpname,"C:G")==0 ||
+			 strcmp(bpname,"A:U")==0 ||
+			 strcmp(bpname,"U:A")==0 ||
+			 strcmp(bpname,"G:U")==0 ||
+			 strcmp(bpname,"U:G")==0 
+			 )){
+		  mat[row][col] = 5;
+		  mat[col][row] = 5;
+		  if(strcmp(bptype, "BF") == 0){
+			stat->bfcnt ++;
+		  }
+		  stat->cancnt ++;
+	    }else if(strcmp(bptype,"BP") ==0 ||
+			strcmp(bptype,"TP")==0||
+			strcmp(bptype,"BF")==0
+			){
+		  mat[row][col] = 4;
+		  mat[col][row] = 4;
+		  if(strcmp(bptype, "BF") == 0){
+			stat->bfcnt ++;
+		  }
+		  stat->noncancnt ++;
+	    }else if(strcmp(basepair,"CLOS")==0){
+		  mat[row][col] = 6;
+		  mat[col][row] = 6;
+		  stat->closcnt ++;
+	    }else{
+		  mat[row][col] = 7;
+		  mat[col][row] = 7;
+		  stat->proxcnt ++;
+
+	    }
+      }
+      FILE* gpfp = fopen(gpfile.c_str(), "w");
+      if(gpfp == NULL){    /* Exception Handling */ 
+	    fprintf(stderr, "Error in function %s() in %s at line %d... Unable to open file.\n", __func__, __FILE__, __LINE__);
+	    exit(EXIT_FAILURE);
+      }
+      fprintf(gpfp,"unset key\n");
+      fprintf(gpfp,"set style increment default\n");
+      fprintf(gpfp,"set view map scale 1\n");
+      fprintf(gpfp,"set style data lines\n");
+      fprintf(gpfp,"unset xtics\n");
+      fprintf(gpfp,"unset ytics\n");
+      fprintf(gpfp,"set ztics border in scale 0,0 nomirror norotate  autojustify\n");
+      fprintf(gpfp,"unset cbtics\n");
+      fprintf(gpfp,"set rtics axis in scale 0,0 nomirror norotate  autojustify\n");
+      fprintf(gpfp,"set title \"Contact map distribution. accn:%s\"\n", accn.c_str()); 
+      fprintf(gpfp,"set zrange [ * : * ] noreverse writeback\n");
+      //fprintf(gpfp,"set cblabel \"Score\"\n"); 
+      int addon = stat->chncnt > 0 ? 1 : 0;
+      int maxcol = 8 + addon;
+      fprintf(gpfp, "set palette maxcolors %d\n", maxcol);
+      fprintf(gpfp,"set cbrange [ 0.0000 : %8.4lf ] noreverse nowriteback\n", (double)(maxcol));
+      char palette[1024];
+      strcpy(palette, "set palette define (0 \"#252121\", 1 \"#ff2bd5\", 2 \"#a8a8a8\", 3 \"#ffbc00\", 4 \"red\", 5 \"#0055ff\", 6 \"green\", 7 \"white\"");
+//      strcpy(palette, "set palette define (0 \"#000030\", 0 \"black\", 1 \"yellow\", 1 \"yellow\", 2 \"gold\", 2 \"gold\", 3 \"orange\", 3 \"orange\", 4 \"red\", 4 \"red\", 5 \"#ff2bd5\", 5 \"#ff2bd5\", 6 \"green\", 6 \"green\", 7 \"white\", 7 \"white\"");
+      char tmpstr[100];
+      for(int i=0; i<addon; ++i){
+	    sprintf(tmpstr, ", %d \"black\"", 8+i);
+	    strcat(palette, tmpstr);
+
+      }
+      strcat(palette, ")\n");
+      if(addon == 0){
+	    fprintf(gpfp, "set cbtics nomirror out (\"FAR\" 0.5, \"ADJA\" 1.5, \"ASTK\" 2.5, \"CROS\" 3.5, \"NC-BP\" 4.5,\"C-BP\" 5.5,\"CLOS\" 6.5, \"PROX\" 7.5)\n");
+      }else{
+	    fprintf(gpfp, "set cbtics nomirror out (\"BGCOL\" 0.5, \"ADJA\" 1.5, \"ASTK\" 2.5, \"CROS\" 3.5, \"NC-BP\" 4.5,\"C-BP\" 5.5,\"CLOS\" 6.5, \"PROX\" 7.5, \"CHN\" 8.5)\n");
+      }
+      
+      /*switch(range){
+	    case 1 : strcat(palette, ",  8  \"#ababab\")\n");
+		     break;
+	    case 2 : strcat(palette, ",  8 rgb \"gray20\",  9 rgb \"gray40\")\n");
+		     break;
+	    case 3 : strcat(palette, ",  8 rgb \"gray20\",  9 rgb \"gray40\",  10 rgb \"gray60\")\n");
+		     break;
+	    case 4 : strcat(palette, ",  8 \"#464242\",  9  \"#5A5757\",  10 \"#7E7979\", 11 \"#181212\")\n");
+		     break;
+	    default:
+		     strcat(palette, ")\n");
+      }*/
+      fprintf(gpfp,"set rrange [ * : * ] noreverse writeback\n");
+//      fprintf(gpfp,"set palette define (0 \"black\", 0 \"black\", 1 \"yellow\", 1 \"yellow\", 2 \"gold\", 2 \"gold\", 3 \"orange\", 3 \"orange\", 4 \"red\", 4 \"red\", 5 \"blue\", 5 \"blue\", 6 \"green\", 6 \"green\", 7 \"white\", 7 \"white\")\n");
+      fprintf(gpfp, "%s", palette);
+      fprintf(gpfp,"set term postscript\n");
+      fprintf(gpfp,"set output \"%s.ps\"\n", accn.c_str());
+
+      fprintf(gpfp, "$mapdata << EOD\n");
+      for(int i=0; i<numres; ++i){
+	    fprintf(gpfp," ,%2d", i+1);
+      }
+      fprintf(gpfp,"\n");
+      for(int i=0; i<numres; ++i){
+	    fprintf(gpfp,"%d", i+1);
+	    for(int j=0; j<numres; ++j){
+		  fprintf(gpfp,",%d",mat[i][j]);
+	    }
+	    fprintf(gpfp,"\n");
+      }
+      fprintf(gpfp, "EOD\n");
+
+
+
+      fprintf(gpfp,"set datafile separator comma\n");
+      fprintf(gpfp,"plot '$mapdata' matrix rowheaders columnheaders using 1:2:3 with image\n");
+      fprintf(gpfp,"set datafile separator\n");
+
+//      gen_post_script(mat, numres);
+
+
+      char accnno[20];
+      strcpy(accnno, accn.c_str());
+      ps_create_heatmap((pdb_accn+"_test.ps").c_str(), accnno, mat, numres);
+
+      fclose(gpfp);
+      fclose(robfp);
+
+      gen_all_contact_bpseq(dirname, accn, mat, numres);
+      gen_varna_applet(dirname, accn, mat, numres);
+
+
+      for(int i=0; i<numres; ++i){
+	    free(mat[i]);
+      }
+      free(mat);
+
+
+}
 void overlap_gen_contact_map(int numres, string dirname, string accn, ovlp_stat* stat,
 	    OvlpRNA_All_Residues* rna){
       std::string pdb_accn = dirname+accn;
