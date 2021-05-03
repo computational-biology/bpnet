@@ -42,7 +42,7 @@ void toascii85(char* asc85, int* len85, const unsigned char* bin,  const int len
       }
 }
 
-void ps_heatmap_head(FILE* fp, char* accn, int nres)
+void ps_heatmap_head(FILE* fp, char* accn, int nres, char* chain)
 {
       fprintf(fp, "%%!PS-Adobe-2.0\n");
       fprintf(fp, "%%%%Title: %s.ps\n", accn);
@@ -647,7 +647,15 @@ void ps_heatmap_head(FILE* fp, char* accn, int nres)
       fprintf(fp, "LCb setrgbcolor\n");
       fprintf(fp, "LCb setrgbcolor\n");
       fprintf(fp, "3111 4829 M\n");
-      fprintf(fp, "[ [(Helvetica) 140.0 0.0 true true 0 (Contact map distribution. accn:%s)]\n", accn);
+      fprintf(fp, "[ [(Helvetica) 140.0 0.0 true true 0 (Contact map distribution. accn:%s  (Res: %d", accn, nres);
+      if(strcmp(chain, "-dummyval") == 0){
+	    fprintf(fp, ")");
+      }else{
+	    
+	    fprintf(fp, ", Chain: %s)", chain);
+
+      }
+      fprintf(fp, ")]\n");
       fprintf(fp, "] -46.7 MCshow\n");
       fprintf(fp, "/Helvetica findfont 140 scalefont setfont\n");
       fprintf(fp, "/vshift -46 def\n");
@@ -774,7 +782,7 @@ void ps_heatmap_tail(FILE* fp)
       fprintf(fp, "63 0 V\n");
       fprintf(fp, "stroke\n");
       fprintf(fp, "6594 1404 M\n");
-      fprintf(fp, "[ [(Helvetica) 140.0 0.0 true true 0 (ASTK)]\n");
+      fprintf(fp, "[ [(Helvetica) 140.0 0.0 true true 0 (STACK)]\n");
       fprintf(fp, "] -46.7 MLshow\n");
       fprintf(fp, "/Helvetica findfont 140 scalefont setfont\n");
       fprintf(fp, "1.000 UL\n");
@@ -784,7 +792,7 @@ void ps_heatmap_tail(FILE* fp)
       fprintf(fp, "63 0 V\n");
       fprintf(fp, "stroke\n");
       fprintf(fp, "6594 1898 M\n");
-      fprintf(fp, "[ [(Helvetica) 140.0 0.0 true true 0 (CROS)]\n");
+      fprintf(fp, "[ [(Helvetica) 140.0 0.0 true true 0 (CROSS)]\n");
       fprintf(fp, "] -46.7 MLshow\n");
       fprintf(fp, "/Helvetica findfont 140 scalefont setfont\n");
       fprintf(fp, "1.000 UL\n");
@@ -804,7 +812,7 @@ void ps_heatmap_tail(FILE* fp)
       fprintf(fp, "63 0 V\n");
       fprintf(fp, "stroke\n");
       fprintf(fp, "6594 2888 M\n");
-      fprintf(fp, "[ [(Helvetica) 140.0 0.0 true true 0 (C-BP)]\n");
+      fprintf(fp, "[ [(Helvetica) 140.0 0.0 true true 0 (WC-BP)]\n");
       fprintf(fp, "] -46.7 MLshow\n");
       fprintf(fp, "/Helvetica findfont 140 scalefont setfont\n");
       fprintf(fp, "1.000 UL\n");
@@ -814,7 +822,7 @@ void ps_heatmap_tail(FILE* fp)
       fprintf(fp, "63 0 V\n");
       fprintf(fp, "stroke\n");
       fprintf(fp, "6594 3382 M\n");
-      fprintf(fp, "[ [(Helvetica) 140.0 0.0 true true 0 (CLOS)]\n");
+      fprintf(fp, "[ [(Helvetica) 140.0 0.0 true true 0 (CLOSE)]\n");
       fprintf(fp, "] -46.7 MLshow\n");
       fprintf(fp, "/Helvetica findfont 140 scalefont setfont\n");
       fprintf(fp, "1.000 UL\n");
@@ -943,14 +951,14 @@ void ps_heatmap_data(FILE* fp, int** mat, int nres)
 	    }
 	    fprintf(fp, "~>\n");
 }
-void ps_create_heatmap(const char* psfile, char* accn, int** mat, int nres)
+void ps_create_heatmap(const char* psfile, char* accn, int** mat, int nres, char* chain)
 {
       FILE* fp = fopen(psfile, "w");
       if(fp == NULL){    /* Exception Handling */ 
 	    fprintf(stderr, "Error in function %s. (File: %s, Line %d)... Unable to create postsctipt file.\n", __func__, __FILE__, __LINE__);
 	    exit(EXIT_FAILURE);
       }
-      ps_heatmap_head(fp, accn, nres);
+      ps_heatmap_head(fp, accn, nres, chain);
       ps_heatmap_data(fp,mat,nres);
       ps_heatmap_tail(fp);
       fclose(fp);

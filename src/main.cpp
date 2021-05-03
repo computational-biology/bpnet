@@ -34,7 +34,7 @@
 
 //#include <libpfind.h>
 
-extern "C" void callbpfindc(char [],  char [], char [], char [], char [], char [], char [], char [], char [], char [], char []);
+extern "C" void callbpfindc(char [],  char [], char [], char [], char [], char [], char [], char [], char [], char [], char [], char[], char[]);
 using namespace std;
 // using namespace boost;
 
@@ -596,8 +596,10 @@ fprintf(adj_file, "+============================================================
     void gen_pymol(struct nucbp* nbp, struct djset* set, 
 		const char* pmlfile, sysparams* syspar, int iscif){
 	    
-	    char color[30][10] = {"red", "purple","green", "blue","orange", "white"};
-	    int numcolor = 6;
+	    char color[30][15] = {"red", "purple", "green", "blue", "orange", "white", "yellow", "gray", 
+		                  "brightorange", "brown", "cyan", "lightblue", "lightteal", "marine",
+	                          "oxygen", "raspberry", "sand", "smudge", "wheat", "sulfur", "slate", "violet"};
+	    int numcolor = 22;
 	    int n = set->numset;
 	    if(n == 0) return;
 	    FILE* fp = fopen(pmlfile, "w");
@@ -613,6 +615,7 @@ fprintf(adj_file, "+============================================================
 		  visited[i] = 0;
 	    }
 
+	    int valid_comp = 0;
 	    for (int i = 0; i < set->size; ++i) {
 		  int vertex = i;
 		    if(visited[vertex] == 1) continue;
@@ -632,9 +635,10 @@ fprintf(adj_file, "+============================================================
 			  vertex = djset_next(set, vertex);
 		    }
 		    fprintf(fp,"\n");
-		    fprintf(fp, "color %s, comp%d\n", color[i%numcolor], vertex+1);
+		    fprintf(fp, "color %s, comp%d\n", color[valid_comp % numcolor], vertex+1);
 		    fprintf(fp, "show  spheres, comp%d\n", vertex+1);
 		    fprintf(fp,"\n");
+		    valid_comp ++;
 	    }
 	    free(visited);
 	    fprintf(fp,"sele sugbackbone, name P+OP1+OP2+O5*+C5*+C4*+O4*+C3*+O3*+C2*+O2*\n"); 
@@ -723,7 +727,10 @@ int main(int argc, char* argv[]) {
         if(arg.substr(0,5) == "-help"){
             show_help();
             exit(1);
-        }else if(arg.substr(0,8)=="-hbdist="){
+        }else if(arg.substr(0,7) == "-chain="){
+	      strcpy(syspar.chainparam, "-ML");
+	      strcpy(syspar.chainvalparam,arg.substr(7).c_str());
+	}else if(arg.substr(0,8)=="-hbdist="){
 	      strcpy(syspar.hdparam, "-HD");
 	      strcpy(syspar.hdvalparam,arg.substr(8).c_str());
 	}else if(arg.substr(0,8)=="-cutang="){
@@ -864,7 +871,8 @@ int main(int argc, char* argv[]) {
 		    callbpfindc(syspar.cifparam, syspar.accnparam, syspar.htparam, 
 				syspar.hdparam, syspar.hdvalparam, syspar.angparam, 
 				syspar.angvalparam, syspar.chparam, syspar.sgparam, 
-				syspar.corparam, syspar.evaltypeparam );
+				syspar.corparam, syspar.evaltypeparam,
+				syspar.chainparam, syspar.chainvalparam);
 	      }
 
 	      string file_path = syspar.file_dir+syspar.accn+".out";
@@ -923,7 +931,7 @@ int main(int argc, char* argv[]) {
                             nucVariants) ;
 		    
 		    ovlp_residue_all_prox_comp(syspar.file_dir+syspar.accn, 4.0, nucVariants_prox, &resinum, &stat);
-		    overlap_gen_contact_map(resinum, syspar.file_dir, syspar.accn, &stat, rna);
+		    overlap_gen_contact_map(resinum, syspar.file_dir, syspar.accn, &stat, rna, syspar.chainvalparam);
 		    struct graph g;
 		    struct djset set;
 		    struct nucbp* nbp;

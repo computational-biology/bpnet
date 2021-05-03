@@ -14,6 +14,8 @@ class sysparams{
 	    char htparam[512];
 	    char hdparam[512];
 	    char hdvalparam[512];
+	    char chainparam[512];
+	    char chainvalparam[512];
 	    char angparam[512];
 	    char angvalparam[512];
 	    char chparam[512];
@@ -47,6 +49,8 @@ class sysparams{
 		  strcpy(htparam, "-HT");
 		  strcpy(hdparam, "-dummyval");
 		  strcpy(hdvalparam, "-dummyval");
+		  strcpy(chainparam, "-dummyval");
+		  strcpy(chainvalparam, "-dummyval");
 		  strcpy(angparam, "-dummyval");
 		  strcpy(angvalparam, "-dummyval");
 		  strcpy(chparam, "-dummyval");

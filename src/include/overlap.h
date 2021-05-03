@@ -3368,7 +3368,7 @@ void gen_all_contact_bpseq(string dirname, string accn, int** matrix, int numres
 
 			fclose(gpfp);
       }
-void overlap_gen_contact_map_for_base_pair(int numres, string dirname, string accn, ovlp_stat* stat){
+void overlap_gen_contact_map_for_base_pair(int numres, string dirname, string accn, ovlp_stat* stat, char* chain){
       std::string pdb_accn = dirname+accn;
       std::string robfile = pdb_accn+".rob";
       std::string proxfile = pdb_accn+".rob";
@@ -3588,7 +3588,7 @@ void overlap_gen_contact_map_for_base_pair(int numres, string dirname, string ac
 
       char accnno[20];
       strcpy(accnno, accn.c_str());
-      ps_create_heatmap((pdb_accn+"_test.ps").c_str(), accnno, mat, numres);
+      ps_create_heatmap((pdb_accn+"_test.ps").c_str(), accnno, mat, numres, chain);
 
       fclose(gpfp);
       fclose(robfp);
@@ -3605,7 +3605,7 @@ void overlap_gen_contact_map_for_base_pair(int numres, string dirname, string ac
 
 }
 void overlap_gen_contact_map(int numres, string dirname, string accn, ovlp_stat* stat,
-	    OvlpRNA_All_Residues* rna){
+	    OvlpRNA_All_Residues* rna, char* chain){
       std::string pdb_accn = dirname+accn;
       std::string robfile = pdb_accn+".rob";
       std::string proxfile = pdb_accn+".rob";
@@ -3840,7 +3840,7 @@ void overlap_gen_contact_map(int numres, string dirname, string accn, ovlp_stat*
 
       char accnno[20];
       strcpy(accnno, accn.c_str());
-      ps_create_heatmap((pdb_accn+"_test.ps").c_str(), accnno, mat, numres);
+      ps_create_heatmap((pdb_accn+"_test.ps").c_str(), accnno, mat, numres, chain);
 
       fclose(gpfp);
       fclose(robfp);
