@@ -23,6 +23,8 @@ struct nucbp{
       char type[MAX_EDGE][3];  // BP, TP, BF
       double eval[MAX_EDGE];
 
+      int oth_base_index[MAX_EDGE]; // This is added for helix computation.
+
       int numbp;
 };
 
@@ -101,6 +103,7 @@ void nucbp_scan_rob(struct nucbp *self, ntvariants_t* ntvar, int numres, const c
 	    char bpname[6];
 	    strcpy(bpname, token);
 	    int pos = graph_set_edge(g, i, j);
+	    self[i].oth_base_index[pos] = j; // This is done because of helix computation.
 	    strcpy(self[i].name[pos], token);
 
 	    token = strtok(NULL, "\t  \n");
@@ -116,6 +119,7 @@ void nucbp_scan_rob(struct nucbp *self, ntvariants_t* ntvar, int numres, const c
 	    graph_set_wt(g, i, pos , self[i].eval[pos]);
 
 	    int pos2 = graph_set_edge(g, j, i);
+	    self[j].oth_base_index[pos2] = i; // this is done for helix computation.
 	    if(bpname[1] == ':') { // If base pair, then reverse the name W:HT  to H:WT
 		  char ch = bpname[2];
 		  bpname[2] = bpname[0];
@@ -180,6 +184,8 @@ void rnabp_scan_out(struct nucbp *self, ntvariants_t* ntvar, int numres, const c
 		  int j = atoi(token);
 		  j --;
 		  int pos = graph_set_edge(g, i, j);
+
+		  self[i].oth_base_index[pos] = j; // This is done because of helix computation.
 
 
 		  token = strtok(NULL, sep);
@@ -426,7 +432,7 @@ void print_adjinfo(struct nucbp* self, int nres, struct djset* set,
 		  }
 		  pos = djset_next(set, pos);
 	    }
-	    printf("exdeg=%d, numexdeg=%d, compsize=%d, cicles=%d\n", exdeg, num_exdeg, comp_size, cycles);
+	    //printf("exdeg=%d, numexdeg=%d, compsize=%d, cicles=%d\n", exdeg, num_exdeg, comp_size, cycles);
 	    if(exdeg == 0) continue;
 	    if(num_exdeg < syspar->_num_exdeg) continue;
 	    if(comp_size < syspar->_from_size || comp_size > syspar->_to_size) continue;

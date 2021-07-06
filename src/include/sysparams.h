@@ -40,6 +40,7 @@ class sysparams{
 	    string adj_file;
 	    string file_dir;
 	    string accn;
+	    string ext;
 	    int total_per_structure;
 	    int overlap_flag; 
 	    int overlap_method;

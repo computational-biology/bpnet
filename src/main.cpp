@@ -13,6 +13,7 @@
 #include <spgraph.h>
 #include <djset.h>
 #include <overlap.h>
+#include <helix.h>
 #include <iostream>
 
 
@@ -859,6 +860,7 @@ int main(int argc, char* argv[]) {
         string accn = file.substr(pos_sep + 1, pos_dot - (pos_sep + 1));
         syspar.accn = accn;
         string ext = file.substr(pos_dot+1);
+        syspar.ext = ext;
         syspar.file_dir = file.substr(0, pos_sep + 1);
         
         cout<<"STARTS ACCN: "<<accn<<endl;
@@ -896,6 +898,46 @@ int main(int argc, char* argv[]) {
 		    nbp = (struct nucbp*) malloc ((ressize) * sizeof(struct nucbp));
 		    string out = syspar.file_dir+syspar.accn+".out";
 		    rnabp_scan_out(nbp, &ntvariants, ressize, out.c_str(), &g);
+		    string hlxfile = syspar.file_dir+syspar.accn+".hlx";
+
+		    FILE *fphlx;										/* output-file pointer */
+
+		    fphlx = fopen(hlxfile.c_str(), "w" );
+		    if ( fphlx == NULL ) {
+			  fprintf ( stderr, "couldn't open file '%s'; %s\n",
+				      hlxfile.c_str(), strerror(errno) );
+			  exit (EXIT_FAILURE);
+		    }
+		    
+
+		    struct pseudo_helix* all_pseudo_helix[1000];
+		    int psucount = 0;
+		    helix_pseudo_calc_all(all_pseudo_helix, &psucount, nbp, ressize);
+
+		    
+		    helix_pseudo_fprint_all(all_pseudo_helix, psucount, nbp, ressize, fphlx);
+
+		    
+		    struct helix* helix_array;
+		    int hlxcount = 0;
+		    
+		    
+		    helix_init_all(&helix_array, ressize/10);
+		    
+		    
+		    helix_calc_all(helix_array, &hlxcount, nbp, ressize);
+		    helix_print_all(helix_array, nbp, hlxcount, fphlx);
+
+		    helix_gen_pymol(all_pseudo_helix, psucount, helix_array, hlxcount, nbp, &syspar);
+		    
+		    helix_free_all(helix_array);
+		    
+		    if( fclose(fphlx) == EOF ) {			/* close output file   */
+			  fprintf ( stderr, "couldn't close file '%s'; %s\n",
+				      hlxfile.c_str(), strerror(errno) );
+			  exit (EXIT_FAILURE);
+		    }
+
 		    djset_init(&set, ressize);
 		    graph_kruskal_component(&g, &set);
 		    print_adjinfo(nbp, ressize, &set, &ntvariants, &syspar, &g, &stat);
