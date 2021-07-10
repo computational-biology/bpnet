@@ -32,6 +32,8 @@ struct graph{
 };
 void graph_free(struct graph* self)
 {
+
+      
       free(self->adj);   
       free(self->deg); 
       free(self->w);   
@@ -144,7 +146,7 @@ void graph_compo_isomorph_name(struct graph* self, struct djset* set, int vertex
 		}else if(d1 == 0 && d2 == 3){
 			strcpy(name,"T2");
 		}else{
-			fprintf(stderr, "Error... Invalid degree sum incountered\n");
+			fprintf(stderr, "Error... in Degree 3, Invalid degree sum incountered\n");
 			exit(EXIT_FAILURE);
 		}
 	}else if(size == 4){
@@ -178,7 +180,7 @@ void graph_compo_isomorph_name(struct graph* self, struct djset* set, int vertex
 		}else if(d1 == 0 && d2 == 0 && d3 == 4){
 			strcpy(name,"Q6");
 		}else{
-			fprintf(stderr, "Error... Invalid degree sum incountered\n");
+			fprintf(stderr, "Error... In degree 4, Invalid degree sum incountered\n");
 			exit(EXIT_FAILURE);
 		}
 	}else if(size == 5){
@@ -246,7 +248,7 @@ void graph_compo_isomorph_name(struct graph* self, struct djset* set, int vertex
 		}else if(d1 == 4 && d2 == 0 && d3 == 0 && d4 == 1){
 			strcpy(name,"P12");
 		}else{
-			fprintf(stderr, "Error... Invalid degree sum incountered\n");
+			fprintf(stderr, "Error... in Degree 5, Invalid degree sum incountered\n");
 			exit(EXIT_FAILURE);
 		}
 	}else if(size == 6){

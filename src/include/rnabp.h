@@ -13,6 +13,22 @@
 
 
 #define MAX_EDGE (7)
+
+
+ int is_canonical(char res1, char res2, char* bpname){
+       if(strcmp(bpname, "W:WC") != 0) return FALSE;
+
+       if(res1 == 'G' && res2 == 'C') return TRUE;
+       if(res1 == 'C' && res2 == 'G') return TRUE;
+
+       if(res1 == 'G' && res2 == 'U') return TRUE;
+       if(res1 == 'U' && res2 == 'G') return TRUE;
+
+       if(res1 == 'A' && res2 == 'U') return TRUE;
+       if(res1 == 'U' && res2 == 'A') return TRUE;
+
+       return FALSE;
+ }
 struct nucbp{
       int cifid;
       char resname[4];

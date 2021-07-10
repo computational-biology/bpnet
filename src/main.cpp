@@ -922,15 +922,17 @@ int main(int argc, char* argv[]) {
 		    int hlxcount = 0;
 		    
 		    
-		    helix_init_all(&helix_array, ressize/10);
+		    helix_init_all(&helix_array, ressize/4);
 		    
 		    
 		    helix_calc_all(helix_array, &hlxcount, nbp, ressize);
 		    helix_print_all(helix_array, nbp, hlxcount, fphlx);
 
-		    helix_gen_pymol(all_pseudo_helix, psucount, helix_array, hlxcount, nbp, &syspar);
+		    helix_gen_pymol(all_pseudo_helix, psucount, helix_array, hlxcount, nbp, ressize, &syspar);
+		    
 		    
 		    helix_free_all(helix_array);
+		    
 		    
 		    if( fclose(fphlx) == EOF ) {			/* close output file   */
 			  fprintf ( stderr, "couldn't close file '%s'; %s\n",
