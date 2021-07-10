@@ -39,7 +39,7 @@
 
 
 #define HELIX_MAX 30
-#define HAIRPIN_LOOP_MAX 6
+#define HAIRPIN_LOOP_MAX 8
 
 struct helix{
       int i[HELIX_MAX];
@@ -765,7 +765,7 @@ void helix_pymol_gen(struct helix* self, struct pymol_param* pyparam, struct nuc
                   ins = nbp[small+i].ins == '?' ? ' ' : nbp[small+i].ins;
 		  fprintf(fp, "(resi %d%c and chain %s) ", nbp[small+i].cifid, ins, nbp[small+i].chain);
 	    }
-	    fprintf(fp, "\ncolor lime, loop%d\n", pyparam->loopcount);
+	    fprintf(fp, "\ncolor aquamarine, loop%d\n", pyparam->loopcount);
 	    fprintf(fp, "set cartoon_color, aquamarine, loop%d\n", pyparam->loopcount);
 //	    fprintf(fp, "\nutil.cbak loop%d\n", pyparam->loopcount);
 //	    fprintf(fp, "set sphere_scale, 0.25, loop%d\n", pyparam->loopcount);
@@ -836,7 +836,8 @@ void non_helix_pymol_gen(struct helix* self, struct pymol_param* pyparam, struct
                   ins = nbp[small+i].ins == '?' ? ' ' : nbp[small+i].ins;
 		  fprintf(fp, "(resi %d%c and chain %s) ", nbp[small+i].cifid, ins, nbp[small+i].chain);
 	    }
-	    fprintf(fp, "\ncolor lime, loop%d\n", pyparam->loopcount);
+	    
+	    fprintf(fp, "\ncolor aquamarine, loop%d\n", pyparam->loopcount);
 	    fprintf(fp, "set cartoon_color, aquamarine, loop%d\n", pyparam->loopcount);
 //	    fprintf(fp, "\nutil.cbak loop%d\n", pyparam->loopcount);
 //	    fprintf(fp, "set sphere_scale, 0.25, loop%d\n", pyparam->loopcount);
