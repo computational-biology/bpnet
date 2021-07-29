@@ -41,6 +41,8 @@
 #define HELIX_MAX 30
 #define HAIRPIN_LOOP_MAX 8
 
+enum helix_type{INCR_DECR=0, DECR_INCR, INCR_INCR, DECR_DECR};
+
 struct helix{
       int i[HELIX_MAX];
       int j[HELIX_MAX];
@@ -179,14 +181,17 @@ int is_prev_resi(struct nucbp* nbp, int nres, int i, int previ){
  * =====================================================================================
  */
 
-void helix_calc(struct helix* self, struct nucbp* nbp, int nres, struct graph* g, int i, int j){
+int helix_calc(struct helix* self, struct nucbp* nbp, int nres, struct graph* g, int i, int j, enum helix_type htype){
       /* The base case */
-      if(graph_edge_index(g, i, j) != -1) return;
+      if(graph_edge_index(g, i, j) != -1) return FALSE;
       int is_cano;
-      if(is_paired(nbp, i,j, &is_cano) == FALSE) return;
+      if(is_paired(nbp, i, j, &is_cano) == FALSE) return FALSE;
       else{
 	    graph_set_edge(g, i, j);
 	    graph_set_edge(g, j, i);
+	    
+	    
+	    
 	    if(self->size == HELIX_MAX){    /* Exception Handling */ 
 		  fprintf(stderr, "Error in function %s. (File: %s, Line %d)... Helix Overflow Encountered.\n", __func__, __FILE__, __LINE__);
 		  exit(EXIT_FAILURE);
@@ -195,11 +200,39 @@ void helix_calc(struct helix* self, struct nucbp* nbp, int nres, struct graph* g
 	    self->j[self->size]=j;
 	    self->is_cano[self->size]=is_cano;
 	    self->size ++;
-	    if(is_next_resi(nbp, nres, i, i+1) == TRUE && is_prev_resi(nbp, nres, j, j-1) == TRUE){
-		  helix_calc(self, nbp, nres, g, i+1, j-1);
+
+	    
+	    if(htype == INCR_DECR){
+		  if((is_next_resi(nbp, nres, i, i+1) == TRUE && is_prev_resi(nbp, nres, j, j-1) == TRUE)){
+
+			helix_calc(self, nbp, nres, g, i+1, j-1, htype);
+		  } 
+	    }else if(htype == DECR_INCR){
+		  if((is_prev_resi(nbp, nres, i, i+1) == TRUE && is_next_resi(nbp, nres, j, j-1) == TRUE)){
+			helix_calc(self, nbp, nres, g, i+1, j-1, htype);
+
+			
+		  } 
+	    }else if(htype == INCR_INCR){
+		  if((is_next_resi(nbp, nres, i, i+1) == TRUE && is_next_resi(nbp, nres, j, j-1) == TRUE)){
+			
+			
+			helix_calc(self, nbp, nres, g, i+1, j-1, htype);
+
+			
+		  } 
+	    }else{// DECR_DECR
+		  if((is_prev_resi(nbp, nres, i, i+1) == TRUE && is_prev_resi(nbp, nres, j, j-1) == TRUE)){
+
+			
+			helix_calc(self, nbp, nres, g, i+1, j-1, htype);
+
+			
+		  } 
 	    }
       }
-      return;
+
+      return TRUE;
 }		/* -----  end of function helix_calc  ----- */
 
 
@@ -220,10 +253,11 @@ void pseudo_helix_free(struct pseudo_helix* self){
       free(self);
       return;
 }
-struct pseudo_helix* pseudo_helix_calc(struct nucbp* nbp, int nres, struct graph* g, int i, int j){
+struct pseudo_helix* pseudo_helix_calc(struct nucbp* nbp, int nres, struct graph* g, int i, int j, enum helix_type htype){
       struct pseudo_helix * self = pseudo_helix_getnode();
       struct helix* h = &self->hlx;
-      helix_calc(h, nbp, nres, g, i, j);
+      int hval;
+      hval = helix_calc(h, nbp, nres, g, i, j, htype);
       if(self->hlx.size < 3){
 	    self->hlx.size = 0;
 	    free(self);
@@ -232,9 +266,9 @@ struct pseudo_helix* pseudo_helix_calc(struct nucbp* nbp, int nres, struct graph
       
       int  i_last = h->i[h->size - 1];
       int  j_last = h->j[h->size - 1];
-      if(is_next_resi(nbp, nres, i_last, i_last+1) == TRUE){
+      if((is_next_resi(nbp, nres, i_last, i_last+1) == TRUE) || (is_prev_resi(nbp, nres, i_last, i_last+1) == TRUE)){
 	    for(int k=0; k<nbp[i_last + 1].numbp; ++k){
-		  struct pseudo_helix* tmphlx = pseudo_helix_calc(nbp, nres, g, i_last+1, nbp[i_last +1].oth_base_index[k]);
+		  struct pseudo_helix* tmphlx = pseudo_helix_calc(nbp, nres, g, i_last+1, nbp[i_last +1].oth_base_index[k], htype);
 		  if(tmphlx != NULL){
 			self->branch[self->count] = tmphlx;
 			self->count ++;
@@ -242,9 +276,9 @@ struct pseudo_helix* pseudo_helix_calc(struct nucbp* nbp, int nres, struct graph
 	    }
       }
 
-      if(is_prev_resi(nbp, nres, j_last, j_last - 1) == TRUE){
+      if((is_prev_resi(nbp, nres, j_last, j_last - 1) == TRUE)|| (is_next_resi(nbp, nres, j_last, j_last - 1) == TRUE)){
 	    for(int k=0; k<nbp[j_last - 1].numbp; ++k){
-		  struct pseudo_helix* tmphlx = pseudo_helix_calc(nbp, nres, g, nbp[j_last - 1].oth_base_index[k], j_last - 1);
+		  struct pseudo_helix* tmphlx = pseudo_helix_calc(nbp, nres, g, nbp[j_last - 1].oth_base_index[k], j_last - 1, htype);
 		  if(tmphlx != NULL){
 			self->branch[self->count] = tmphlx;
 			self->count ++;
@@ -334,7 +368,16 @@ void helix_pseudo_calc_all(struct pseudo_helix* all_pseudo_helix[], int* counter
 		  int j = nbp[i].oth_base_index[k];
 		  if(graph_edge_index(&g, i, j) != -1) continue;
 
-		  struct pseudo_helix* tmp = pseudo_helix_calc(nbp, nres, &g, i, j);
+		  struct pseudo_helix* tmp = pseudo_helix_calc(nbp, nres, &g, i, j, INCR_DECR);
+		  if(tmp== NULL){
+			tmp = pseudo_helix_calc(nbp, nres, &g, i, j, DECR_INCR);
+		  }
+		  if(tmp== NULL){
+			tmp = pseudo_helix_calc(nbp, nres, &g, i, j, INCR_INCR);
+		  }
+		  if(tmp == NULL){
+			tmp = pseudo_helix_calc(nbp, nres, &g, i, j, DECR_DECR);
+		  }
 		  if(tmp != NULL){
 			if(tmp->count == 0) {
 			      free(tmp);
@@ -430,17 +473,32 @@ int helix_check_hairpin(struct helix* self, struct nucbp* nbp){
 void helix_calc_all(struct helix* self, int* hlxcount, struct nucbp* nbp, int nres){
       struct graph g;
       *hlxcount = 0;
-      graph_init(&g, nres, UNDIRECTED); 
+      graph_init(&g, 100*nres, UNDIRECTED); 
 
       
+      
       for(int i=0; i<nres; ++i){
+	    
 	    
 	    
 	    for(int k=0; k<nbp[i].numbp; ++k){
 		  int j = nbp[i].oth_base_index[k];
 		  if(graph_edge_index(&g, i, j) != -1) continue;
 		  self[*hlxcount].size = 0;
-		  helix_calc(self+ *hlxcount, nbp, nres, &g, i, j);
+
+		  
+		  
+		  int hval = helix_calc(self+ *hlxcount, nbp, nres, &g, i, j, INCR_DECR);
+		  if(hval == FALSE){
+			hval = helix_calc(self+ *hlxcount, nbp, nres, &g, i, j, DECR_INCR);
+		  }
+
+		  if(hval == FALSE){
+			hval = helix_calc(self+ *hlxcount, nbp, nres, &g, i, j, INCR_INCR);
+		  }
+		  if(hval == FALSE){
+			helix_calc(self+ *hlxcount, nbp, nres, &g, i, j, DECR_DECR);
+		  }
 		  helix_check_hairpin(self + *hlxcount, nbp);
 
 		  *hlxcount = *hlxcount + 1;
@@ -449,7 +507,10 @@ void helix_calc_all(struct helix* self, int* hlxcount, struct nucbp* nbp, int nr
 //			*hlxcount = *hlxcount + 1;
 //		  }
 	    }
+
+	    
       }
+
 
       
       graph_free(&g);
@@ -519,7 +580,6 @@ int compute_bulge_pymol(struct helix* h1, struct helix* h2, struct nucbp* nbp, i
 
      if(end - beg >= bulge_size - 1) return FALSE;
      fprintf(fp, "select bulge%d, ", pyparam->bulgecount);
-     printf("beg=%d, end=%d\n", beg, end);
      for(int i = beg+1; i<end; ++i){
 	   ins = nbp[i].ins == '?' ? ' ' : nbp[i].ins;
 	    fprintf(fp, "(resi %d%c and chain %s) ", nbp[i].cifid, ins, nbp[i].chain) ;
@@ -670,29 +730,15 @@ void pymol_gen_triplets(struct nucbp* nbp, int nres, FILE* fp){
 			ins = nbp[nbp[i].oth_base_index[j]].ins == '?' ? ' ' : nbp[nbp[i].oth_base_index[j]].ins;
 			sprintf(tmpline, "(resi %d%c and chain %s) ", nbp[nbp[i].oth_base_index[j]].cifid, ins, nbp[nbp[i].oth_base_index[j]].chain) ;
 			strcat(trpline, tmpline);
-
-
-			if(flag%2 == 0){
-			      sprintf(line, "distance dred, (resi %d%c and chain %s and (name N3 or name C6)) ", nbp[i].cifid, ins, nbp[i].chain) ;
-			      sprintf(tmpline, ", (resi %d%c and chain %s and (name N3 or name C6))", nbp[nbp[i].oth_base_index[j]].cifid, ins, nbp[nbp[i].oth_base_index[j]].chain);
-			      strcat(line, tmpline);
-			      strcat(line, ", 15.0, 4\n");
-			      strcat(line, "set dash_width, 2.0, dred\n");
-			      strcat(line, "\nset dash_gap, 0, dred\n");
-			      strcat(line, "set dash_color, lightorange, dred\n");
-			      strcat(line, "hide label, dred\n");
-			      fprintf(fp, "%s", line);
-			}else{
-			      sprintf(line, "distance dgreen, (resi %d%c and chain %s and (name N3 or name C6)) ", nbp[i].cifid, ins, nbp[i].chain) ;
-			      sprintf(tmpline, ", (resi %d%c and chain %s and (name N3 or name C6))", nbp[nbp[i].oth_base_index[j]].cifid, ins, nbp[nbp[i].oth_base_index[j]].chain);
-			      strcat(line, tmpline);
-			      strcat(line, ", 15.0, 4\n");
-			      strcat(line, "set dash_width, 2.0, dgreen\n");
-			      strcat(line, "\nset dash_gap, 0, dgreen\n");
-			      strcat(line, "set dash_color, lightorange, dgreen\n");
-			      strcat(line, "hide label, dgreen\n");
-			      fprintf(fp, "%s", line);
-			}
+			sprintf(line, "distance dred, (resi %d%c and chain %s and (name N3 or name C6)) ", nbp[i].cifid, ins, nbp[i].chain) ;
+			sprintf(tmpline, ", (resi %d%c and chain %s and (name N3 or name C6))", nbp[nbp[i].oth_base_index[j]].cifid, ins, nbp[nbp[i].oth_base_index[j]].chain);
+			strcat(line, tmpline);
+			strcat(line, ", 15.0, 4\n");
+			strcat(line, "set dash_width, 2.0, dred\n");
+			strcat(line, "\nset dash_gap, 0, dred\n");
+			strcat(line, "set dash_color, lightorange, dred\n");
+			strcat(line, "hide label, dred\n");
+			fprintf(fp, "%s", line);
 		  }
 		  fprintf(fp, "%s", trpline);
 		  fprintf(fp, "\nset cartoon_ring_mode, 2, higher\n");
@@ -701,12 +747,8 @@ void pymol_gen_triplets(struct nucbp* nbp, int nres, FILE* fp){
 //		  fprintf(fp, "show sphere, higher\n");
 		  //      fprintf(fp, "show_as cartoon, higher%d\n\n");
 		  //      fprintf(fp, "show sphere, helix%d\n\n", pyparam->helixcount);
-		  if(flag%2 == 0){
-			fprintf(fp, "color limegreen, higher\n");
-		  }else{
-			fprintf(fp, "color limegreen, higher\n");
+		  fprintf(fp, "color limegreen, higher\n");
 
-		  }
 		  flag++;
 		  fprintf(fp, "show line, higher\n\n");
 		  //      fprintf(fp, "set cartoon_color, marine, helix%d\n", pyparam->helixcount);

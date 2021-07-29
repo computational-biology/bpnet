@@ -56,7 +56,7 @@ class sysparams{
 		  strcpy(angvalparam, "-dummyval");
 		  strcpy(chparam, "-dummyval");
 		  strcpy(sgparam, "-dummyval");
-		  strcpy(evaltypeparam, "-c1");
+		  strcpy(evaltypeparam, "-dummyval");
 		  strcpy(corparam, "-dummyval");
 		  total_per_structure = 0;
 		  res_from_size = 0;

@@ -703,6 +703,65 @@ void show_help(){
     cout<<" It works for multiple files, like, bpnet *.out -netsize=4 -exdeg=3"<<endl;
 
 }
+void gen_helix(nucbp* nbp, sysparams* syspar, int ressize){
+
+      string hlxfile = syspar->file_dir+syspar->accn+".hlx";
+
+      FILE *fphlx;										/* output-file pointer */
+
+      fphlx = fopen(hlxfile.c_str(), "w" );
+      if ( fphlx == NULL ) {
+	    fprintf ( stderr, "couldn't open file '%s'; %s\n",
+			hlxfile.c_str(), strerror(errno) );
+	    exit (EXIT_FAILURE);
+      }
+
+
+      struct pseudo_helix* all_pseudo_helix[1000];
+      int psucount = 0;
+
+
+
+      helix_pseudo_calc_all(all_pseudo_helix, &psucount, nbp, ressize);
+
+
+
+
+      helix_pseudo_fprint_all(all_pseudo_helix, psucount, nbp, ressize, fphlx);
+
+
+
+
+      struct helix* helix_array;
+      int hlxcount = 0;
+
+
+      helix_init_all(&helix_array, ressize);
+
+
+
+
+      helix_calc_all(helix_array, &hlxcount, nbp, ressize);
+
+
+      helix_print_all(helix_array, nbp, hlxcount, fphlx);
+
+
+
+      helix_gen_pymol(all_pseudo_helix, psucount, helix_array, hlxcount, nbp, ressize, syspar);
+
+
+
+      helix_free_all(helix_array);
+
+
+      if( fclose(fphlx) == EOF ) {			/* close output file   */
+	    fprintf ( stderr, "couldn't close file '%s'; %s\n",
+			hlxfile.c_str(), strerror(errno) );
+	    exit (EXIT_FAILURE);
+      }
+
+}
 int main(int argc, char* argv[]) {
 
     sysparams syspar = sysparams();
@@ -743,24 +802,24 @@ int main(int argc, char* argv[]) {
 	      strcpy(syspar.chparam, "-CH");
 	}else if(arg.substr(0,13)=="-hetatm=false"){
 	      strcpy(syspar.htparam, "-dummyval");
-	}else if(arg.substr(0, 10) =="-eval=true"){
-	      strcpy(syspar.evaltypeparam, "-dummyval");
+	}else if(arg.substr(0, 11) =="-eval=false"){
+	      strcpy(syspar.evaltypeparam, "-c1");
 	}
 
 
 	
 	
 	
-	else if(arg.substr(0,9) == "-overlap="){
-	      if(arg.substr(9,4) == "true"){
+	else if(arg.substr(0,9) == "-nettype="){
+	      if(arg.substr(9,7) == "contact"){
 		    syspar.overlap_flag = 1;
 		    syspar.is_overlap = "TRUE";
 		    syspar.type = "OL";
-	      }else if(arg.substr(9,5) == "false"){
+	      }else if(arg.substr(9,8) == "basepair"){
 		    syspar.overlap_flag = 0;
 		    syspar.is_overlap = "FALSE";
 	      }else{    /* Exception Handling */ 
-		    fprintf(stderr, "Error in flag -overlap, the value will be either true or false\n");
+		    fprintf(stderr, "Error in flag -nettype, the value will be either 'contact' or 'basepair'\n");
 		    exit(EXIT_FAILURE);
 	      }
 	}else if(arg.substr(0,10) == "-cifpymol="){
@@ -864,7 +923,18 @@ int main(int argc, char* argv[]) {
         syspar.file_dir = file.substr(0, pos_sep + 1);
         
         cout<<"STARTS ACCN: "<<accn<<endl;
-	if(ext == "cif" || ext == "pdb"){
+	if(ext == "cif" || ext == "pdb" || ext == "out"){
+	      if(ext == "out" && syspar.overlap_flag == 1){
+		    fprintf(stderr, "Error... out mode works only for basepair network\n");
+		    exit(EXIT_FAILURE);
+	      }
+	      if(ext == "out"){
+		    fprintf(stderr, "Warning... out mode works if all the base pair related files \n");
+		    fprintf(stderr, "           are present in the directory. Further you cannot \n");
+		    fprintf(stderr, "          change the base pair or weight parameters. \n");
+		    fprintf(stderr, "          You can only change network parameters. So, if\n");
+		    fprintf(stderr, "          you are not sure what you want, run with cif/pdb extension.\n");
+	      }
 	      strcpy(syspar.accnparam,file.c_str());
 	      if(ext == "cif" || ext == "pdb"){
 		    if(ext == "cif"){
@@ -898,48 +968,7 @@ int main(int argc, char* argv[]) {
 		    nbp = (struct nucbp*) malloc ((ressize) * sizeof(struct nucbp));
 		    string out = syspar.file_dir+syspar.accn+".out";
 		    rnabp_scan_out(nbp, &ntvariants, ressize, out.c_str(), &g);
-		    string hlxfile = syspar.file_dir+syspar.accn+".hlx";
-
-		    FILE *fphlx;										/* output-file pointer */
-
-		    fphlx = fopen(hlxfile.c_str(), "w" );
-		    if ( fphlx == NULL ) {
-			  fprintf ( stderr, "couldn't open file '%s'; %s\n",
-				      hlxfile.c_str(), strerror(errno) );
-			  exit (EXIT_FAILURE);
-		    }
-		    
-
-		    struct pseudo_helix* all_pseudo_helix[1000];
-		    int psucount = 0;
-		    helix_pseudo_calc_all(all_pseudo_helix, &psucount, nbp, ressize);
-
-		    
-		    helix_pseudo_fprint_all(all_pseudo_helix, psucount, nbp, ressize, fphlx);
-
-		    
-		    struct helix* helix_array;
-		    int hlxcount = 0;
-		    
-		    
-		    helix_init_all(&helix_array, ressize/4);
-		    
-		    
-		    helix_calc_all(helix_array, &hlxcount, nbp, ressize);
-		    helix_print_all(helix_array, nbp, hlxcount, fphlx);
-
-		    helix_gen_pymol(all_pseudo_helix, psucount, helix_array, hlxcount, nbp, ressize, &syspar);
-		    
-		    
-		    helix_free_all(helix_array);
-		    
-		    
-		    if( fclose(fphlx) == EOF ) {			/* close output file   */
-			  fprintf ( stderr, "couldn't close file '%s'; %s\n",
-				      hlxfile.c_str(), strerror(errno) );
-			  exit (EXIT_FAILURE);
-		    }
-
+		    gen_helix(nbp, &syspar, ressize);
 		    djset_init(&set, ressize);
 		    graph_kruskal_component(&g, &set);
 		    print_adjinfo(nbp, ressize, &set, &ntvariants, &syspar, &g, &stat);
@@ -983,6 +1012,21 @@ int main(int argc, char* argv[]) {
 		    nbp = (struct nucbp*) malloc ((ressize) * sizeof(struct nucbp));
 		    string out = syspar.file_dir+syspar.accn+".rob";
 		    nucbp_scan_rob(nbp, &ntvariants, ressize, out.c_str(), &g);
+
+		    // This part is for helix and pymol helix generation on contact base netwok mode.
+		    struct nucbp* nbphlx;
+		    nbphlx = (struct nucbp*) malloc ((ressize) * sizeof(struct nucbp));
+		    struct graph ghlx;
+		    graph_init(&ghlx, ressize, UNDIRECTED);
+		    string outhlx = syspar.file_dir+syspar.accn+".out";
+		    rnabp_scan_out(nbphlx, &ntvariants, ressize, outhlx.c_str(), &ghlx);
+		    gen_helix(nbphlx, &syspar, ressize);
+		    graph_free(&ghlx);
+		    free(nbphlx);
+		    // End of addition for helix generation.
+
+
+
 		    djset_init(&set, ressize);
 		    graph_kruskal_component(&g, &set);
 		    print_adjinfo(nbp, ressize, &set, &ntvariants, &syspar, &g, &stat);

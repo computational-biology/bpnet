@@ -375,6 +375,7 @@ void print_summary(sysparams* syspar, ovlp_stat* stat, int num_comp, FILE* adj_f
 	    fprintf(adj_file, "NO. OF CROS : %d\n", stat->croscnt);
 	    fprintf(adj_file, "NO. OF PROX : %d\n", stat->proxcnt);
       }
+      fprintf(adj_file, "\n---------------------------D E T A I L    R E P O R T ---------------------\n");
 }
 
 //void print_adjacency(struct rnabp* self, 
