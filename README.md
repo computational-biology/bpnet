@@ -1,12 +1,15 @@
 NAME	
+
     BPNet 
 
 
 SYNOPSIS
+
 		bpnet.linux [OPTIONS] [FILE...]
 
 
 DESCRIPTION
+
 	This program is for calculating the overlap between 
 	two bases in a nucluic acid for RNA. The output is
 	stored in a .rob file with the same name of the .cor
@@ -14,6 +17,7 @@ DESCRIPTION
 
 
 INSTLLATION
+
       	EASY-METHOD
 		Download the binary executable 'bpnet.linux' and place it to some suitable folder.
 		Done.
@@ -30,12 +34,14 @@ INSTLLATION
 		Then move the binary executable 'bpnet.linux' to your suitable path.
 
 SETUP
+
 	BPNet uses several files for its work. These are kept in 'sysfiles' directory.
 	copy all of them and paste them in a folder. We prefer the following.
 
 		/usr/local/bin
 
 PATH-SETTING
+
 	BPNet reads system files through an environment variable called NUCLEIC_ACID_DIR. 
 	Suppose you have put all the files of 'sysfiles' directory in the /usr/local/bin, 
 	then put the following line in your '.bashrc' file.
@@ -43,6 +49,7 @@ PATH-SETTING
 		export NUCLEIC_ACID_DIR=/usr/local/bin/
 	
 PARALLEL-MODE
+
 	BPNet can run in parallel mode. But for this OpenMP library should be installed
 	in your machine.
 		PARALLEL-MODE COMPILE
@@ -61,15 +68,18 @@ PARALLEL-MODE
 
 
 RUN
+
 	To run the program, go to the directory where the structure files are stored.
 	Then run as follows.
 		
 		bpnet.linux xxxx.cif
 
 INPUT
+
 	BPNet accepts mmCIF and PDB file formats.
 
 OUTPUT
+
 	A full list of output files are listed below.
 
 		xxxx_rna.pdb 
@@ -109,6 +119,7 @@ OUTPUT
 			The applet is compatible with VARNA (http://varna.lri.fr). 
 
 RUNTIME OPTIONS
+
 	BPNet uses several command line options to tune the result. The lollowing are the full lists 
 	of the same.
 	
@@ -247,6 +258,7 @@ ABBREVIATIONS
     		BF - Bifurcated pair (Follow our paper BPFIND(2006) )
 
 BUG REPORT
+
 		Email bug reports to the bug-reporting address 
 		⟨roy.parthajit@gmail.com⟩  or 
 		⟨dhananjay.bhattacharyya@saha.ac.in⟩
