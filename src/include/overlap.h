@@ -601,6 +601,8 @@ public:
       std::string pair_name;
       std::string pair_type;
       double overlap;
+      double base1surf;
+      double base2surf;
       ~OvlpFileData(){
             cout<<"OvlpFileData deleted"<<endl;
       }
@@ -608,7 +610,9 @@ public:
                int base2,int base2_pdb,std::string base2_name, char base2_ins, std::string base2_chain,
                std::string pair_name,
                std::string pair_type,
-               double overlap
+               double overlap,
+	       double base1surfpts,
+	       double base2surfpts
       ){
             this->base1         = base1;
             this->base1_pdb     = base1_pdb;
@@ -625,12 +629,14 @@ public:
             this->pair_type     = pair_type;
 
             this->overlap       = overlap;
+	    this->base1surf = base1surfpts;
+	    this->base2surf = base2surfpts;
 
 
 
       }
       void fprint(FILE* fp){
-            fprintf(fp,"OVLP    %6d:%-6d  %c %6d:%-6d %c   %3s:%-3s   %3s-%-3s  %4s  %2s  : %8.2lf",
+            fprintf(fp,"OVLP    %6d:%-6d  %c %6d:%-6d %c   %3s:%-3s   %3s-%-3s  %4s  %2s  : %8.2lf  %8.2lf %8.2lf",
                     base1,
                     base2,
 		    base1_ins,
@@ -643,7 +649,9 @@ public:
                     base2_chain.c_str(),
                     pair_name.c_str(),
                     pair_type.c_str(),
-                    overlap);
+                    overlap,
+		    base1surf/(double)OvlpParameters::dots_per_angstrom_sqr,
+		    base2surf/(double)OvlpParameters::dots_per_angstrom_sqr);
             /*    fprintf(fp,"      (");
                 for(int i=0;i<mNumBase1_atoms;i++){
                     fprintf(fp,"%s ",this->base1_atom_names[i].c_str());
@@ -1430,8 +1438,8 @@ private:
       OverlapAtom ** AtomArray;
       int total_overlap_points;
       int total_points;
-      int actual_surface_points;
 public:
+      int actual_surface_points;
       OverlapAtom c1_p =OverlapAtom(-1,"C1*", 0.0, 0.0, 0.0);
       OverlapAtom* c2;
       OverlapAtom* c5;
@@ -1545,6 +1553,8 @@ public:
             this->nucleobase    = nucleo_base;
             this->num_atom      = AtomStack->get_no_elements();
             this->AtomArray     = new OverlapAtom *[num_atom];
+	    OverlapAtom* n1 = NULL;
+	    OverlapAtom* n3 = NULL;
 	    c1_p.x = 0.0;
 	    c1_p.y = 0.0;
 	    c1_p.z = 0.0;
@@ -1566,7 +1576,12 @@ public:
 			c2 = AtomArray[i];
 		  }else if(AtomArray[i]->get_atom_name() == "C5"){
 			c5 = AtomArray[i];
+		  }else if(AtomArray[i]->get_atom_name() == "N1"){
+			n1 = AtomArray[i];
+		  }else if(AtomArray[i]->get_atom_name() == "N3"){
+			n3 = AtomArray[i];
 		  }
+
                   if(AtomArray[i]->getX()<x_min) x_min = AtomArray[i]->getX();
                   if(AtomArray[i]->getX()>x_max) x_max = AtomArray[i]->getX();
 
@@ -1577,8 +1592,24 @@ public:
                   if(AtomArray[i]->getZ()>z_max) z_max = AtomArray[i]->getZ();
             }
             this->center_of_mass = new OvlpPoint3D( (x_min+x_max)/2.0,(y_min+y_max)/2.0,(z_min+z_max)/2.0);
+	    if(c2 == NULL && c5 == NULL){
+		  c2 = n1;
+		  c5 = n3;
+	    }else if(c2 == NULL){
+		  if(n1 != NULL){
+			c2 = n1;
+		  }else{
+			c2 = n3;
+		  }
+	    }else if(c5 == NULL){
+		  if(n1 != NULL){
+			c5 = n1;
+		  }else{
+			c5 = n3;
+		  }
+	    }
 	    if(c2 == NULL || c5 == NULL){
-		  fprintf(stderr, "Error... c2 or c5 not found inresidue no %d\n", residue_no);
+		  fprintf(stderr, "Error... c2 or c5 or n1 or n2 not found in residue no %d\n", residue_no);
 		  exit(EXIT_FAILURE);
 	    }
 	    getplane3d(&PlaneA, &PlaneB, &PlaneC, &PlaneD, 
@@ -1600,6 +1631,8 @@ public:
 	    c1_p.x = c1prime.x;
 	    c1_p.y = c1prime.y;
 	    c1_p.z = c1prime.z;
+	    OverlapAtom* n1 = NULL;
+	    OverlapAtom* n3 = NULL;
 	    c2 = NULL;
 	    c5 = NULL; 
             double x_min        =  9999999.0;
@@ -1618,7 +1651,12 @@ public:
 			c2 = AtomArray[i];
 		  }else if(AtomArray[i]->get_atom_name() == "C5"){
 			c5 = AtomArray[i];
+		  }else if(AtomArray[i]->get_atom_name() == "N1"){
+			n1 = AtomArray[i];
+		  }else if(AtomArray[i]->get_atom_name() == "N3"){
+			n3 = AtomArray[i];
 		  }
+
                   if(AtomArray[i]->getX()<x_min) x_min = AtomArray[i]->getX();
                   if(AtomArray[i]->getX()>x_max) x_max = AtomArray[i]->getX();
 
@@ -1629,8 +1667,24 @@ public:
                   if(AtomArray[i]->getZ()>z_max) z_max = AtomArray[i]->getZ();
             }
             this->center_of_mass = new OvlpPoint3D( (x_min+x_max)/2.0,(y_min+y_max)/2.0,(z_min+z_max)/2.0);
+	    if(c2 == NULL && c5 == NULL){
+		  c2 = n1;
+		  c5 = n3;
+	    }else if(c2 == NULL){
+		  if(n1 != NULL){
+			c2 = n1;
+		  }else{
+			c2 = n3;
+		  }
+	    }else if(c5 == NULL){
+		  if(n1 != NULL){
+			c5 = n1;
+		  }else{
+			c5 = n3;
+		  }
+	    }
 	    if(c2 == NULL || c5 == NULL){
-		  fprintf(stderr, "Error... c2 or c5 not found inresidue no %d\n", residue_no);
+		  fprintf(stderr, "Error... c2 or c5 or n1 not found inresidue no %d\n", residue_no);
 		  exit(EXIT_FAILURE);
 	    }
 	    getplane3d(&PlaneA, &PlaneB, &PlaneC, &PlaneD, 
@@ -2520,7 +2574,9 @@ public:
                                                               chain_name_j,
                                                               base_name,
                                                               tmp_base_type,
-                                                              result
+                                                              result,
+							      this->residue_bases[i]->actual_surface_points,
+							      this->residue_bases[j]->actual_surface_points
                               );
                               file_stack->push(fdata);
                               //gsl_spmatrix_set(adj, i, j, result);
@@ -2717,7 +2773,7 @@ public:
                         return false;
                   }
             }
-	    if(base == "PSU") return true;
+	    if(base == "PSU" || base == "FHU" || base == "QUO" || base == "N6G") return true;
             cerr<<"Error.... "<<base<<" is not a valid basename in syscon .name files... Please contact developpers\n";
             exit(1);
             return false;

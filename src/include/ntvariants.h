@@ -93,6 +93,8 @@ void ntvar_populate(ntvariants_t* ntvar){
 		strcpy(ntvar->GuaVariants[ntvar->GuaVarCnt], line);
 		ntvar->GuaVarCnt++;
 	}
+	strcpy(ntvar->GuaVariants[ntvar->GuaVarCnt], "N6G");
+	ntvar->GuaVarCnt++;
 	fclose(fp);
 
 	strcpy(filename,nucdir);
@@ -120,6 +122,10 @@ void ntvar_populate(ntvariants_t* ntvar){
 		ntvar->UraVarCnt++;
 	}
 	strcpy(ntvar->UraVariants[ntvar->UraVarCnt], "PSU");
+	ntvar->UraVarCnt++;
+	strcpy(ntvar->UraVariants[ntvar->UraVarCnt], "QUO");
+	ntvar->UraVarCnt++;
+	strcpy(ntvar->UraVariants[ntvar->UraVarCnt], "FHU");
 	ntvar->UraVarCnt++;
 	fclose(fp);
 }

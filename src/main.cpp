@@ -510,7 +510,7 @@ fprintf(adj_file, "+============================================================
 	}
     }
 
-    fprintf(adj_file, "\n---------------------------S U M M A R Y  R E P O R T ---------------------\n");
+    fprintf(adj_file, "\n--------------------------- S U M M A R Y  R E P O R T ---------------------\n");
     fprintf(adj_file, "DATE    %s\n", OvlpGen::today().c_str());
     fprintf(adj_file,"ACCN    %s\n", syspar->accn.c_str());
     
@@ -565,7 +565,13 @@ fprintf(adj_file, "+============================================================
     fprintf(edge_file,"END\n");
     fclose(edge_file);
     if(syspar->cifpymol == "TRUE"){
-	    g.gen_pymol_cif(pymol_file.c_str(), syspar);
+	  if(syspar->is_overlap == "TRUE"){
+		g.gen_pymol_cif(pymol_file.c_str(), syspar);
+	  }else{
+		
+		
+		g.gen_pymol_basepair_cif(pymol_file.c_str(), syspar);
+	  }
     }
     if(syspar->corpymol == "TRUE"){
 	    g.gen_pymol_cor(pymol_file.c_str(), syspar);
@@ -594,6 +600,131 @@ fprintf(adj_file, "+============================================================
     cout<<"----------------------------------------------"<<endl<<endl;
 }
 
+    void gen_pymol_basepair(struct nucbp* nbp, struct djset* set, 
+		const char* pmlfile, sysparams* syspar){
+
+	  char pymolline[2000];
+	  int n = set->numset;
+	  if(n == 0) return;
+	  FILE* fp = fopen(pmlfile, "w");
+	  assert(fp != NULL);
+	  //fp = stdout;
+	  fprintf(fp,"load %s.cif\n",syspar->accn.c_str());
+	  int* visited = (int*) malloc (set->size * sizeof(int));
+	  for(int i=0; i<set->size; ++i){
+		visited[i] = 0;
+	  }
+
+	  int valid_comp = 0;
+	  fprintf(fp, "select proteinall, polymer.protein\n");
+	  fprintf(fp, "color olive,  proteinall\n");
+	  fprintf(fp, "hide everything, proteinall\n");
+	  fprintf(fp, "select waterall, solvent\n");
+	  fprintf(fp, "hide everything, waterall\n");
+	  fprintf(fp, "select nucleicall, polymer.nucleic\n");
+	  fprintf(fp, "set_bond stick_radius, 0.50, nucleicall\n");
+	  fprintf(fp, "set sphere_scale, 0.25, all\n");
+	  fprintf(fp, "color violet,  nucleicall\n");
+	  fprintf(fp, "set sphere_scale, 0.30, all\n");
+	  fprintf(fp, "set cartoon_ring_mode, 0, nucleicall\n");
+	  fprintf(fp, "set cartoon_ladder_mode, 0, nucleicall\n");
+	  if(strcmp(syspar->chainvalparam, "-dummyval") != 0){
+		fprintf(fp, "hide everything, nucleicall\n");
+		fprintf(fp, "select ch, chain %s\n", syspar->chainvalparam);
+		fprintf(fp, "show cartoon, ch\n");
+	  }else{
+		fprintf(fp, "show cartoon, nucleicall\n");
+	  }
+	  int color=0;
+	  char colorbase[][20] = {"marine", "red", "green", "white", };
+	  char colorline[][20] = {"white", "green", "red", "marine"};
+	  int max_color=4;
+	  for (int i = 0; i < set->size; ++i) {
+		int vertex = i;
+		if(visited[vertex] == 1) continue;
+		int comp_size = djset_composize(set, vertex);
+		for(int j=0; j<comp_size; ++j){
+		      visited[vertex] = 1;
+		      vertex = djset_next(set, vertex);
+		}
+		if(comp_size < syspar->_from_size || comp_size > syspar->_to_size) continue; 
+		fprintf(fp, "select comp%d, ", vertex+1);
+		
+		for(int j=0; j<comp_size; ++j){
+		      fprintf(fp, "(resi %d and chain %s) ", nbp[vertex].cifid, nbp[vertex].chain);
+		      vertex = djset_next(set, vertex);
+		}
+		fprintf(fp,"\n");
+		int index = color % max_color;
+///		fprintf(fp, "color %s, comp%d\n", colorbase[index], vertex+1);
+		if(comp_size == 2){
+		      fprintf(fp, "color slate, comp%d\n", vertex+1);
+		}else if(comp_size == 3){
+		      fprintf(fp, "color green, comp%d\n", vertex+1);
+
+		}else if(comp_size == 4){
+		      fprintf(fp, "color red, comp%d\n", vertex+1);
+
+		}else if(comp_size == 6){
+		      fprintf(fp, "color white, comp%d\n", vertex+1);
+
+		}else if(comp_size == 7){
+		      fprintf(fp, "color yellow, comp%d\n", vertex+1);
+
+		}else if(comp_size == 8){
+		      fprintf(fp, "color limegreen, comp%d\n", vertex+1);
+
+		}else{
+		      fprintf(fp, "color brightorange, comp%d\n", vertex+1);
+		}
+
+		color ++;
+		fprintf(fp, "set cartoon_ring_mode, 2,  comp%d\n", vertex+1);
+		fprintf(fp, "set cartoon_ladder_mode, 1, comp%d\n", vertex+1);
+		fprintf(fp, "show_as cartoon, comp%d\n", vertex+1);
+		fprintf(fp, "show line, comp%d\n", vertex+1);
+		fprintf(fp,"\n\n\n");
+		vertex = i; //This is for line generation.
+		for(int j=0; j<comp_size; ++j){
+		      for(int k=0; k<nbp[vertex].numbp; ++k){
+			    int othindex = nbp[vertex].oth_base_index[k];
+			    fprintf(fp, "distance line%d,  (resi %d and chain %s and (name N3 or name C6)) , (resi %d and chain %s and (name N3 or name C6)), 15.0, 4\n", i+1, 
+					nbp[vertex].cifid, nbp[vertex].chain,
+					nbp[othindex].cifid, nbp[othindex].chain);
+		      }
+		      vertex = djset_next(set, vertex);
+		}
+		fprintf(fp, "set dash_width, 2.0, line%d\n", i+1);
+		fprintf(fp, "set dash_gap, 0, line%d\n", i+1);
+//		fprintf(fp, "set dash_color, %s, line%d\n", colorline[index], i+1);
+		if(comp_size == 2){
+		      fprintf(fp, "set dash_color, orange, line%d\n", i+1);
+		}else if(comp_size == 3){
+		      fprintf(fp, "set dash_color, red, line%d\n", i+1);
+
+		}else if(comp_size == 4){
+		      fprintf(fp, "set dash_color, green, line%d\n", i+1);
+
+		}else if(comp_size == 6){
+		      fprintf(fp, "set dash_color, marine, line%d\n", i+1);
+
+		}else if(comp_size == 7){
+		      fprintf(fp, "set dash_color, purple, line%d\n", i+1);
+
+		}else if(comp_size == 8){
+		      fprintf(fp, "set dash_color, wheat, line%d\n", i+1);
+
+		}else{
+		      fprintf(fp, "set dash_color, white, line%d\n", i+1);
+		}
+
+		fprintf(fp, "hide label, line%d\n", i+1);
+		valid_comp ++;
+	  }
+	  free(visited);
+
+	  fclose(fp);
+    }
     void gen_pymol(struct nucbp* nbp, struct djset* set, 
 		const char* pmlfile, sysparams* syspar, int iscif){
 	    
@@ -611,6 +742,17 @@ fprintf(adj_file, "+============================================================
 	    }else{
 		  fprintf(fp,"load %s_rna.pdb\n",syspar->accn.c_str());
 	    }
+	    fprintf(fp, "\nselect proteinall, polymer.protein");
+	    fprintf(fp, "\ncolor olive,  proteinall");
+	    fprintf(fp, "\nhide everything, proteinall\n");
+	    fprintf(fp, "\nselect nucleicall, polymer.nucleic\n");
+	    if(strcmp(syspar->chainvalparam, "-dummyval") != 0){
+		  fprintf(fp, "hide everything, nucleicall\n");
+		  fprintf(fp, "select ch, chain %s\n", syspar->chainvalparam);
+		  fprintf(fp, "show cartoon, ch\n");
+	    }else{
+		  fprintf(fp, "show cartoon, nucleicall\n");
+	  }
 	    int* visited = (int*) malloc (set->size * sizeof(int));
 	    for(int i=0; i<set->size; ++i){
 		  visited[i] = 0;
@@ -686,21 +828,15 @@ fprintf(adj_file, "+============================================================
 
 void show_help(){
     cout<<" This program is for finding the base-pair network In RNAs."<<endl;
-    cout<<" It assumes a .out or .rob file as its input."<<endl;
-    cout<<" In case of .rob file it expects .out file as well."<<endl;
-    cout<<" In both the cases, it assumes the .dat file."<<endl;
     cout<<" The switches are:"<<endl;
     cout<<"     -netsize=5 (prints only network of size 5), Default is 3"<<endl;
     cout<<"     -netsize=5-10 (prints only network of size 5 to 10), Default is 3-30"<<endl;
     cout<<"     -exdeg=3  (Prints all networks with at least a vertex with degree 3"<<endl;
     cout<<"                (Default is 2)"<<endl;
     cout<<"     -cycles=2 (Computes the number of cycles, Main cycles), Default 0";
-    cout<<"     -outformat=new/old (default new)"<<endl;
     cout<<"     -ovlpcutoff=20.0 for non-base pair overlap cutoff value"<<endl;
-    cout<<"     -adj=true for creation of adjacency matrix. Default false"<<endl;
-    cout<<"\n\n It generates a .edge file for edge lists, .adj(optional) file for adjacency"<<endl;
-    cout<<" matrix for every file. It also generates a pairchain.net for all files."<<endl;
     cout<<" It works for multiple files, like, bpnet *.out -netsize=4 -exdeg=3"<<endl;
+    cout<<"\n\n For detailed help, use --genhelp option. this will generate the help.md file in the current directory"<<endl;
 
 }
 void gen_helix(nucbp* nbp, sysparams* syspar, int ressize){
@@ -784,7 +920,7 @@ int main(int argc, char* argv[]) {
     cout<<"THE ENTIRE PROCESS STARTS"<<endl;
     for (int i = 1; i < argc; ++i) {
         std::string arg = argv[i];
-        if(arg.substr(0,5) == "-help"){
+        if(arg.substr(0,6) == "--help"){
             show_help();
             exit(1);
         }else if(arg.substr(0,7) == "-chain="){
@@ -846,6 +982,8 @@ int main(int argc, char* argv[]) {
         }else if(arg.substr(0,8) == "-cycles=") {
             syspar._num_cycles = atoi(arg.substr(8).c_str());
         }else if(arg.substr(0,15) == "-wttype=c1p-c1p") {
+	      strcpy(syspar.evaltypeparam, "-c1");
+
 	    OvlpParameters::proximity_method = METHOD_C1PC1P;
             syspar.overlap_method = 1;
         }else if(arg.substr(0,7) == "-exdeg="){
@@ -979,7 +1117,14 @@ int main(int argc, char* argv[]) {
 		    if(syspar.cifpymol == "TRUE"){
 			  iscif = 1;
 			  pymolfile = syspar.file_dir+syspar.accn+"_cif.pml";
-			  gen_pymol(nbp, &set, pymolfile.c_str(), &syspar, iscif);
+			  if(syspar.is_overlap == "TRUE"){
+				gen_pymol(nbp, &set, pymolfile.c_str(), &syspar, iscif);
+			  }else{
+				gen_pymol(nbp, &set, pymolfile.c_str(), &syspar, iscif);
+//				gen_pymol_basepair(nbp, &set, pymolfile.c_str(), &syspar);
+
+			  }
+
 		    }
 		    if(syspar.corpymol == "TRUE"){
 			  iscif = 0;
@@ -1070,7 +1215,7 @@ int main(int argc, char* argv[]) {
 	      fprintf(summfp, "NO. OF CROS : %d\n", stat.croscnt);
 	      fprintf(summfp, "NO. OF PROX : %d\n", stat.proxcnt);
 	}else{
-	      fprintf(summfp, "Overlap not requested");
+	      fprintf(summfp, "CONTACT NETWORK NOT REQUESTED\n");
 	}
 	cout<<"ENDS ACCN: "<<accn<<endl;
 	cout<<"----------------------------------------------"<<endl<<endl;

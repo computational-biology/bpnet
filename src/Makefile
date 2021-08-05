@@ -1,7 +1,7 @@
 bpnet: main.o libbpfind.o 
-	g++  main.o libbpfind.o -o bpnet.linux -lgfortran
+	g++  main.o libbpfind.o -o bpnet.linux -lgfortran -lquadmath
 libbpfind.o: libbpfind.f
-	gfortran -c libbpfind.f -fcheck=all
+	gfortran -c libbpfind.f 
 main.o: main.cpp
 	g++ -c main.cpp -I./include
 	

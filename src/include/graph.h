@@ -422,6 +422,54 @@ public:
 		fprintf(fp, "\n");
 		fprintf(fp, "        TOTAL COMPONENTS:%d\n",cnt);
     }
+    void gen_pymol_basepair_cif(const char* pmlfile, sysparams* syspar){
+
+	  
+	  int n = num_components();
+	  if(n == 0) return;
+	  FILE* fp = fopen(pmlfile, "w");
+	  if(fp == NULL){    /* Exception Handling */ 
+		fprintf(stderr, "Error in function %s. (File: %s, Line %d)... cannot open file for writing pml script.\n", __func__, __FILE__, __LINE__);
+		exit(EXIT_FAILURE);
+	  }
+	  //fp = stdout;
+	  fprintf(fp,"load %s.cif\n",syspar->accn.c_str());
+	  fprintf(fp, "select proteinall, polymer.protein\n");
+	  fprintf(fp, "color olive,  proteinall\n");
+	  fprintf(fp, "hide everything, proteinall\n");
+	  fprintf(fp, "select waterall, solvent\n");
+	  fprintf(fp, "hide everything, waterall\n");
+	  fprintf(fp, "select nucleicall, polymer.nucleic\n");
+	  fprintf(fp, "set_bond stick_radius, 0.50, nucleicall\n");
+	  fprintf(fp, "set sphere_scale, 0.25, all\n");
+	  fprintf(fp, "color violet,  nucleicall\n");
+	  fprintf(fp, "set sphere_scale, 0.30, all\n");
+	  fprintf(fp, "show cartoon, nucleicall\n");
+	  fprintf(fp, "set cartoon_ring_mode, 0, nucleicall\n");
+	  fprintf(fp, "set cartoon_ladder_mode, 1, nucleicall\n");
+	  fprintf(fp, "show_as cartoon, cartoon\n");
+
+	  for (int i = 0; i < n; ++i) {
+		vector<int> component = all_components.at(i);
+		int comp_size = (int) component.size();
+		if(comp_size < syspar->_from_size || comp_size > syspar->_to_size) continue; 
+		if(comp_size == 1 && syspar->is_overlap == "TRUE"){
+		      fprintf(stderr, "Worning... In overlap mode an isolated vertex found\n");
+		} 
+		//if(comp_size == 1) continue;
+		int v = component.at(0);
+		fprintf(fp, "select comp%d, ",v+1);
+		fprintf(fp, "(resi %d and chain %s) ", this->cifid[v], this->chain[v] );
+		for(int j=1; j<comp_size; ++j){
+		      int v1 = component.at(j);
+		      fprintf(fp, "(resi %d and chain %s) ", this->cifid[v1], this->chain[v1] );
+		}
+		fprintf(fp,"\n");
+		fprintf(fp, "util.cbak comp%d\n", v+1);
+		fprintf(fp,"\n");
+	  }
+	  fclose(fp);
+    }
     void gen_pymol_cif(const char* pmlfile, sysparams* syspar){
 	    char color[30][10] = {"red", "purple","green", "blue","orange", "white"};
 	    int numcolor = 6;

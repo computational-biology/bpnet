@@ -927,12 +927,18 @@ void helix_gen_pymol(struct pseudo_helix* psuhlx[], int psuhlxcount, struct heli
       fprintf(fp, "\nset_bond stick_radius, 0.50, nucleicall");
       fprintf(fp, "\nset sphere_scale, 0.25, all");
       fprintf(fp, "\ncolor violet,  nucleicall");
-      fprintf(fp, "\nset sphere_scale, 0.30, all");
+      fprintf(fp, "\nset sphere_scale, 0.30, all\n");
 //      fprintf(fp, "\nshow sticks, nucleicall");
 //      fprintf(fp, "\nshow spheres, nucleicall");
 //      fprintf(fp, "\nset cartoon_ladder_mode,0");
 //      fprintf(fp, "\nset cartoon_ring_finder,0");
-      fprintf(fp, "\nshow cartoon, nucleicall\n");
+	  if(strcmp(syspar->chainvalparam, "-dummyval") != 0){
+		fprintf(fp, "hide everything, nucleicall\n");
+		fprintf(fp, "select ch, chain %s\n", syspar->chainvalparam);
+		fprintf(fp, "show cartoon, ch\n");
+	  }else{
+		fprintf(fp, "show cartoon, nucleicall\n");
+	  }
 
       for(int i=0; i<helixcount; ++i){
 	    if(hlx[i].size < 3){
