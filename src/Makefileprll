@@ -1,9 +1,9 @@
 bpnet: main.o libbpfind.o 
-	g++  main.o libbpfind.o -o bpnet.linux.parallel -lgfortran -fopenmp
+	g++   main.o libbpfind.o -o bpnet.linux.parallel -lgfortran -fopenmp -lquadmath
 libbpfind.o: libbpfind.f
-	gfortran -c libbpfind.f
+	gfortran -c -static libbpfind.f
 main.o: main.cpp
-	g++ -c main.cpp -I./include -fopenmp
+	g++ -c -static main.cpp -I./include -fopenmp
 clean :
 	-rm -f *.o
 
