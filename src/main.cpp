@@ -35,7 +35,7 @@
 
 //#include <libpfind.h>
 
-extern "C" void callbpfindc(char [],  char [], char [], char [], char [], char [], char [], char [], char [], char [], char [], char[], char[]);
+extern "C" void callbpfindc(char [],  char [], char [], char [], char [], char [], char [], char [], char [], char [], char [], char[], char[], char[], char[]);
 using namespace std;
 // using namespace boost;
 
@@ -786,6 +786,9 @@ fprintf(adj_file, "+============================================================
 	    free(visited);
 	    fprintf(fp,"sele sugbackbone, name P+OP1+OP2+O5*+C5*+C4*+O4*+C3*+O3*+C2*+O2*\n"); 
 	    fprintf(fp,"hide spheres, sugbackbone\n");
+	    if(syspar->nmrvalparam != "-dummyval"){
+		  fprintf(fp, "set state, %s\n", syspar->nmrvalparam);
+	    }
 
 	    fclose(fp);
     }
@@ -940,6 +943,12 @@ int main(int argc, char* argv[]) {
 	      strcpy(syspar.htparam, "-dummyval");
 	}else if(arg.substr(0, 11) =="-eval=false"){
 	      strcpy(syspar.evaltypeparam, "-c1");
+	}else if(arg.substr(0,4) == "-nmr"){
+	      strcpy(syspar.nmrparam, "-MD");
+	      strcpy(syspar.nmrvalparam, "1");
+	      if(arg.substr(4,1)== "="){
+		    strcpy(syspar.nmrvalparam, arg.substr(5).c_str());
+	      }
 	}
 
 
@@ -1082,7 +1091,8 @@ int main(int argc, char* argv[]) {
 				syspar.hdparam, syspar.hdvalparam, syspar.angparam, 
 				syspar.angvalparam, syspar.chparam, syspar.sgparam, 
 				syspar.corparam, syspar.evaltypeparam,
-				syspar.chainparam, syspar.chainvalparam);
+				syspar.chainparam, syspar.chainvalparam,
+				syspar.nmrparam, syspar.nmrvalparam);
 	      }
 
 	      string file_path = syspar.file_dir+syspar.accn+".out";
@@ -1098,7 +1108,7 @@ int main(int argc, char* argv[]) {
 	      if(syspar.overlap_flag == 0){
 		    int resinum;
 		    //ovlp_residue_all_prox_comp(syspar.file_dir+syspar.accn, 4.0, nucVariants_prox, &resinum, &stat);
-		    //overlap_gen_contact_map_for_base_pair(resinum, syspar.file_dir, syspar.accn, &stat);
+		    //overlap_gen_contact_map_for_base_pair(resinum, syspar.file_dir, syspar.accn, &stat, syspar.nmrvalparam);
 		    struct graph g;
 		    struct djset set;
 		    struct nucbp* nbp;
@@ -1149,7 +1159,7 @@ int main(int argc, char* argv[]) {
                             nucVariants) ;
 		    
 		    ovlp_residue_all_prox_comp(syspar.file_dir+syspar.accn, 4.0, nucVariants_prox, &resinum, &stat);
-		    overlap_gen_contact_map(resinum, syspar.file_dir, syspar.accn, &stat, rna, syspar.chainvalparam);
+		    overlap_gen_contact_map(resinum, syspar.file_dir, syspar.accn, &stat, rna, syspar.chainvalparam, syspar.nmrvalparam);
 		    struct graph g;
 		    struct djset set;
 		    struct nucbp* nbp;

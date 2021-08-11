@@ -22,6 +22,8 @@ class sysparams{
 	    char sgparam[512];
 	    char evaltypeparam[512];
 	    char corparam[50];
+	    char nmrparam[50];
+	    char nmrvalparam[50];
 	    int _from_size;
 	    int _to_size;
 	    int _exdeg; //Exists at least one vertex with degree.
@@ -58,6 +60,8 @@ class sysparams{
 		  strcpy(sgparam, "-dummyval");
 		  strcpy(evaltypeparam, "-dummyval");
 		  strcpy(corparam, "-dummyval");
+		  strcpy(nmrparam, "-dummyval");
+		  strcpy(nmrvalparam, "-dummyval");
 		  total_per_structure = 0;
 		  res_from_size = 0;
 		  res_to_size = 99999999;

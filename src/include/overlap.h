@@ -3429,7 +3429,7 @@ void gen_all_contact_bpseq(string dirname, string accn, int** matrix, int numres
 
 			fclose(gpfp);
       }
-void overlap_gen_contact_map_for_base_pair(int numres, string dirname, string accn, ovlp_stat* stat, char* chain){
+void overlap_gen_contact_map_for_base_pair(int numres, string dirname, string accn, ovlp_stat* stat, char* chain, char* nmrmodel){
       std::string pdb_accn = dirname+accn;
       std::string robfile = pdb_accn+".rob";
       std::string proxfile = pdb_accn+".rob";
@@ -3649,7 +3649,7 @@ void overlap_gen_contact_map_for_base_pair(int numres, string dirname, string ac
 
       char accnno[20];
       strcpy(accnno, accn.c_str());
-      ps_create_heatmap((pdb_accn+".ps").c_str(), accnno, mat, numres, chain);
+      ps_create_heatmap((pdb_accn+".ps").c_str(), accnno, mat, numres, chain, nmrmodel);
 
       fclose(gpfp);
       fclose(robfp);
@@ -3666,7 +3666,7 @@ void overlap_gen_contact_map_for_base_pair(int numres, string dirname, string ac
 
 }
 void overlap_gen_contact_map(int numres, string dirname, string accn, ovlp_stat* stat,
-	    OvlpRNA_All_Residues* rna, char* chain){
+	    OvlpRNA_All_Residues* rna, char* chain, char* nmrmodel){
       std::string pdb_accn = dirname+accn;
       std::string robfile = pdb_accn+".rob";
       std::string proxfile = pdb_accn+".rob";
@@ -3901,7 +3901,7 @@ void overlap_gen_contact_map(int numres, string dirname, string accn, ovlp_stat*
 
       char accnno[20];
       strcpy(accnno, accn.c_str());
-      ps_create_heatmap((pdb_accn+".ps").c_str(), accnno, mat, numres, chain);
+      ps_create_heatmap((pdb_accn+".ps").c_str(), accnno, mat, numres, chain, nmrmodel);
 
       fclose(gpfp);
       fclose(robfp);
@@ -3948,6 +3948,7 @@ void gen_varna_applet(string dirname, string accn, int** matrix, int numres){
       fprintf(appletfp, "codebase=\"/usr/local/bin/\"\n");
       fprintf(appletfp, "archive=\"VARNAv3-93.jar\"\n");
       fprintf(appletfp, "width=\"800\" height=\"800\">\n");
+      fprintf(appletfp, "<param name=\"algorithm\"  value=\"naview\" />\n");
       fprintf(appletfp, "<param name=\"sequenceDBN\"  value=\"%s\" />\n", basestramp);
       fprintf(appletfp, "<param name=\"structureDBN\" value=\"%s\" />\n", dbnstramp);
       fprintf(appletfp, "<param name=\"auxBPs\" value=\"\n");

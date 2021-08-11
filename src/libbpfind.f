@@ -37,7 +37,8 @@ C
 
        subroutine callbpfindc(cif , accn, ht, hd, 
      1 hdval, ang, angval, ch, sg, 
-     2 cor, eval, chain, chainval)bind(c, name ='callbpfindc')
+     2 cor, eval, chain, chainval, 
+     3 nmr, nmrval)bind(c, name ='callbpfindc')
        use iso_c_binding, only: c_char , c_null_char
 C       character(kind=c_char), dimension(*), intent(in)    ::  argv
 C       character(kind=c_char), intent(in) ::  a1(20), a2(20)
@@ -54,6 +55,8 @@ C       character(kind=c_char), intent(in) ::  a1(20), a2(20)
        character(kind=c_char,len=1),dimension(512),intent(in) ::eval
        character(kind=c_char,len=1),dimension(512),intent(in) ::chain
        character(kind=c_char,len=1),dimension(512),intent(in) ::chainval
+       character(kind=c_char,len=1),dimension(512),intent(in) ::nmr
+       character(kind=c_char,len=1),dimension(512),intent(in) ::nmrval
         ! here I have a string with fixed length
         character*512 val1(50)
         character (len=512) ::params
@@ -300,6 +303,49 @@ c       write(*,*) params
               narg = narg + 1
             val1(narg) = params
         end if
+
+
+
+        params = "";  
+        loop_nmr: do i=1, 512
+        if ( nmr(i) == c_null_char ) then
+              exit loop_nmr
+        else
+              params (i:i) = nmr(i)
+        end if
+        end do loop_nmr
+
+c        write(*,*) params
+
+        if(params.ne.'-dummyval') then
+              narg = narg + 1
+            val1(narg) = params
+        end if
+
+        params = "";  
+        loop_nmrval: do i=1, 512
+        if ( nmrval(i) == c_null_char ) then
+              exit loop_nmrval
+        else
+              params (i:i) = nmrval(i)
+        end if
+        end do loop_nmrval
+
+c       write(*,*) params
+
+        if(params.ne.'-dummyval') then
+              narg = narg + 1
+            val1(narg) = params
+        end if
+
+
+
+
+
+
+
+
+
 
 
         narg = narg + 1

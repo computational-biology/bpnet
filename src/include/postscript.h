@@ -42,7 +42,7 @@ void toascii85(char* asc85, int* len85, const unsigned char* bin,  const int len
       }
 }
 
-void ps_heatmap_head(FILE* fp, char* accn, int nres, char* chain)
+void ps_heatmap_head(FILE* fp, char* accn, int nres, char* chain, int nmr_mdl)
 {
       fprintf(fp, "%%!PS-Adobe-2.0\n");
       fprintf(fp, "%%%%Title: %s.ps\n", accn);
@@ -648,12 +648,13 @@ void ps_heatmap_head(FILE* fp, char* accn, int nres, char* chain)
       fprintf(fp, "LCb setrgbcolor\n");
       fprintf(fp, "3111 4829 M\n");
       fprintf(fp, "[ [(Helvetica) 140.0 0.0 true true 0 (Contact map distribution. accn:%s  (Res: %d", accn, nres);
-      if(strcmp(chain, "-dummyval") == 0){
+      if(strcmp(chain, "-dummyval") != 0){
+	    fprintf(fp, ", Chain: %s", chain);
+      }
+      if(nmr_mdl < 0){
 	    fprintf(fp, ")");
       }else{
-	    
-	    fprintf(fp, ", Chain: %s)", chain);
-
+	    fprintf(fp, ", NMR MDL: %d)", nmr_mdl);
       }
       fprintf(fp, ")]\n");
       fprintf(fp, "] -46.7 MCshow\n");
@@ -951,14 +952,21 @@ void ps_heatmap_data(FILE* fp, int** mat, int nres)
 	    }
 	    fprintf(fp, "~>\n");
 }
-void ps_create_heatmap(const char* psfile, char* accn, int** mat, int nres, char* chain)
+void ps_create_heatmap(const char* psfile, char* accn, int** mat, int nres, char* chain, char* nmrmodel)
 {
       FILE* fp = fopen(psfile, "w");
       if(fp == NULL){    /* Exception Handling */ 
 	    fprintf(stderr, "Error in function %s. (File: %s, Line %d)... Unable to create postsctipt file.\n", __func__, __FILE__, __LINE__);
 	    exit(EXIT_FAILURE);
       }
-      ps_heatmap_head(fp, accn, nres, chain);
+      int nmrval;
+      if(strcmp(nmrmodel, "-dummyval") ==0 ){
+	    nmrval = -999;
+      }else{
+	    nmrval = atoi(nmrmodel);
+      }
+
+      ps_heatmap_head(fp, accn, nres, chain, nmrval);
       ps_heatmap_data(fp,mat,nres);
       ps_heatmap_tail(fp);
       fclose(fp);

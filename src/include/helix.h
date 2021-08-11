@@ -939,6 +939,9 @@ void helix_gen_pymol(struct pseudo_helix* psuhlx[], int psuhlxcount, struct heli
 	  }else{
 		fprintf(fp, "show cartoon, nucleicall\n");
 	  }
+	  if(strcmp(syspar->nmrvalparam, "-dummyval") != 0){
+		fprintf(fp, "set state, %s\n", syspar->nmrvalparam);
+	  }
 
       for(int i=0; i<helixcount; ++i){
 	    if(hlx[i].size < 3){
