@@ -88,6 +88,7 @@ void helix_fprint(struct helix* self, struct nucbp* nbp, FILE* fp){
 	    fprintf(fp, "%c %c  ", nbp[self->i[k]].resclass, nbp[self->j[k]].resclass);
 	    fprintf(fp, "%5d %-4s", nbp[self->i[k]].cifid,nbp[self->i[k]].chain) ;
 	    fprintf(fp, "%5d %-4s", nbp[self->j[k]].cifid,nbp[self->j[k]].chain) ;
+	    fprintf(fp, "%5d:%-5d  ", self->i[k]+1, self->j[k]+1);
 	    fprintf(fp, "\n");
       }
       if(self->is_hairpin == TRUE){
@@ -871,24 +872,29 @@ void non_helix_pymol_gen(struct helix* self, struct pymol_param* pyparam, struct
       fprintf(fp, "select tmp2, %s\n", noncan);
       fprintf(fp, "util.cbak tmp2\n");
       fprintf(fp, "set cartoon_color, violet, nonhelix\n");
-      if(self->is_hairpin == TRUE){
-	    fprintf(fp, "select loop%d, ", pyparam->loopcount);
-	    int small = (self->i[self->size-1]< self->j[self->size-1]) ? self->i[self->size-1] : self->j[self->size-1];
-	    for(int i=1; i<=self->pinsize; ++i){
-                  ins = nbp[small+i].ins == '?' ? ' ' : nbp[small+i].ins;
-		  fprintf(fp, "(resi %d%c and chain %s) ", nbp[small+i].cifid, ins, nbp[small+i].chain);
-	    }
-	    
-	    fprintf(fp, "\ncolor aquamarine, loop%d\n", pyparam->loopcount);
-	    fprintf(fp, "set cartoon_color, aquamarine, loop%d\n", pyparam->loopcount);
+//      if(self->is_hairpin == TRUE){
+//	    fprintf(fp, "select loop%d, ", pyparam->loopcount);
+//	    int small = (self->i[self->size-1]< self->j[self->size-1]) ? self->i[self->size-1] : self->j[self->size-1];
+//	    for(int i=1; i<=self->pinsize; ++i){
+//                  ins = nbp[small+i].ins == '?' ? ' ' : nbp[small+i].ins;
+//		  fprintf(fp, "(resi %d%c and chain %s) ", nbp[small+i].cifid, ins, nbp[small+i].chain);
+//	    }
+//	    
+//	    fprintf(fp, "\ncolor aquamarine, loop%d\n", pyparam->loopcount);
+//	    fprintf(fp, "set cartoon_color, aquamarine, loop%d\n", pyparam->loopcount);
+
+// up to this commented
+
+
+
 //	    fprintf(fp, "\nutil.cbak loop%d\n", pyparam->loopcount);
 //	    fprintf(fp, "set sphere_scale, 0.25, loop%d\n", pyparam->loopcount);
 //	    fprintf(fp, "set cartoon_ring_mode, 2, loop%d\n", pyparam->loopcount);
 //	    fprintf(fp, "set cartoon_ladder_mode, 0, loop%d\n", pyparam->loopcount);
 //	    fprintf(fp, "show_as cartoon, loop%d\n\n", pyparam->loopcount);
 //	    fprintf(fp, "show line, loop%d\n\n", pyparam->loopcount);
-	    pyparam->loopcount = pyparam->loopcount + 1; 
-      }
+//	    pyparam->loopcount = pyparam->loopcount + 1; 
+//      }
 
 //      if(self->is_hairpin == TRUE){
 //	    fprintf(fp, "select loop%d, ", pyparam->loopcount);
