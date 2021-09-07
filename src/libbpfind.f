@@ -2872,7 +2872,7 @@ c        write(*,*) 'I and NRES',i,nres
 c4       format(13X,A4,A3,1X,A1,I4,a1,3X,3F8.3,2x,f4.2,f6.2)
 c	if(i.eq.nres+1) then
         call rnahelix(nmpass,filenm,nnf,modelno,nocsv,nodat,nodbn,nohlx)
-        write(6,*) 'Calculation of a MODEL over'
+c        write(6,*) 'Calculation of a MODEL over'
 !        enddo                                   ! end of kmodel loop
 c        endif
 	return
@@ -3623,7 +3623,7 @@ C NNW : NO.OF HELICES CONTAINING AT LEST ONE NON-WATSON-CRICK BP
 c       OPEN(UNIT=2,FILE='nwhelix.dat')
 c       OPEN(UNIT=3,FILE='wchelix.dat')
 c       open(unit=8,file='pshelix.dat')
-	write(6,*) 'In RNAHELIX subroutine'
+c	write(6,*) 'In RNAHELIX subroutine'
        nn=index(nmpass,'.')
         file2=nmpass
 c	if(nohlx.eq.0) then

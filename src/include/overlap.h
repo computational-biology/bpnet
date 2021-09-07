@@ -2424,10 +2424,10 @@ public:
 
 	    }
 	    fclose(fp);
-	    printf("Total Chains found: %d\n", stat->chncnt);
-	    for(int i=0; i<stat->chncnt; ++i){
-		  printf("CHN: %s MIN: %4d, MAX:%4d\n", stat->chain[i].c_str(), stat->chnmin[i], stat->chnmax[i]);
-	    }
+//	    printf("Total Chains found: %d\n", stat->chncnt);
+//	    for(int i=0; i<stat->chncnt; ++i){
+//		  printf("CHN: %s MIN: %4d, MAX:%4d\n", stat->chain[i].c_str(), stat->chnmin[i], stat->chnmax[i]);
+//	    }
       }
       ~OvlpRNA_All_Residues(){
 

@@ -1052,6 +1052,22 @@ int main(int argc, char* argv[]) {
     for(int i=0; i<file_count; i++){
 	  int ressize;
         string file = file_array[i];
+
+	FILE	*chfp;										/* output-file pointer */
+	char	chfp_file_name[512];
+	strcpy(chfp_file_name, file.c_str());		/* output-file name    */
+
+	chfp	= fopen( chfp_file_name, "r" );
+	if ( chfp == NULL ) {
+	      fprintf ( stderr, "couldn't open file '%s'; %s\n",
+			  chfp_file_name, strerror(errno) );
+	      exit (EXIT_FAILURE);
+	}else if( fclose(chfp) == EOF ) {			/* close output file   */
+	      fprintf ( stderr, "couldn't close file '%s'; %s\n",
+			  chfp_file_name, strerror(errno) );
+	      exit (EXIT_FAILURE);
+	}
+
         int pos_sep = (int)file.find_last_of("/");
         int pos_dot = (int)file.find_last_of(".");
         if(pos_dot < 0){
@@ -1062,6 +1078,7 @@ int main(int argc, char* argv[]) {
 	ovlp_stat stat;
 	ovlp_stat_init(&stat);
 
+	
 
         string accn = file.substr(pos_sep + 1, pos_dot - (pos_sep + 1));
         syspar.accn = accn;
@@ -1235,7 +1252,7 @@ int main(int argc, char* argv[]) {
       delete all_surf_points;
       delete nucVariants;
     }
-    printf("Total %d components found on your query\n",syspar._total_count);
+    printf("TOTAL %d COMPONENTS FOUND ON YOUR QUERY\n",syspar._total_count);
     delete [] file_array;
     cout<<"THE ENTIRE PROCESS COMPLETES"<<endl;
     return 0;
