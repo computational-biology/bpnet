@@ -75,7 +75,7 @@ class sysparams{
 		  _num_exdeg = 1;
 		  _num_cycles = 0;
 		  _outformat = "new";
-		  type = "BP";
+		  type = "OL";
 		  wt_overlap_cutoff = 0.0001;
 		  adj_file = "TRUE";
 		  is_overlap = "TRUE";

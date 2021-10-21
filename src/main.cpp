@@ -963,6 +963,7 @@ int main(int argc, char* argv[]) {
 	      }else if(arg.substr(9,8) == "basepair"){
 		    syspar.overlap_flag = 0;
 		    syspar.is_overlap = "FALSE";
+		    syspar.type = "BP";
 	      }else{    /* Exception Handling */ 
 		    fprintf(stderr, "Error in flag -nettype, the value will be either 'contact' or 'basepair'\n");
 		    exit(EXIT_FAILURE);
@@ -1158,6 +1159,7 @@ int main(int argc, char* argv[]) {
 			  pymolfile = syspar.file_dir+syspar.accn+"_rna.pml";
 			  gen_pymol(nbp, &set, pymolfile.c_str(), &syspar, iscif);
 		    }
+		    gen_verna_applet_file(syspar.file_dir, syspar.accn, nbp, ressize);
 
 		    graph_free(&g);
 		    djset_free(&set);

@@ -15,6 +15,34 @@
 #define MAX_EDGE (7)
 
 
+void get_edge_name(char name[], char esymb){
+      if(esymb == 'W' || esymb == 'w' || esymb == '+'){
+	    strcpy(name, "wc");
+      }else if(esymb == 'S' || esymb == 's' || esymb == 'z'){
+	    strcpy(name, "s");
+      }else if(esymb == 'H' || esymb == 'h' || esymb == 'g'){
+	    strcpy(name, "h");
+      }else{
+	    fprintf(stderr, "Error in function %s()... wrong edge name encountered.\n", __func__);
+	    exit(EXIT_FAILURE);
+      }
+}
+ int is_canonical_for_varna(char resi1, char resi2, char* bpname){
+       if(strcmp(bpname, "W:WC") != 0) return FALSE;
+       char res1 = toupper(resi1);
+       char res2 = toupper(resi2);
+
+       if(res1 == 'G' && res2 == 'C') return TRUE;
+       if(res1 == 'C' && res2 == 'G') return TRUE;
+
+       if(res1 == 'G' && res2 == 'U') return TRUE;
+       if(res1 == 'U' && res2 == 'G') return TRUE;
+
+       if(res1 == 'A' && res2 == 'U') return TRUE;
+       if(res1 == 'U' && res2 == 'A') return TRUE;
+
+       return FALSE;
+ }
  int is_canonical(char res1, char res2, char* bpname){
        if(strcmp(bpname, "W:WC") != 0) return FALSE;
 
@@ -43,6 +71,114 @@ struct nucbp{
 
       int numbp;
 };
+
+//void gen_varna_applet(string dirname, string accn, int** matrix, int numres){
+void gen_verna_applet_file(string dirname, string accn, struct nucbp* nbp, int numres){
+      std::string pdb_accn = dirname+accn;
+      std::string dbnfile = pdb_accn+".dbn";
+      std::string html_file = pdb_accn+".html";
+      FILE* dbnfp = fopen(dbnfile.c_str(), "r");
+      int dbnsize = numres+200; // With ampersand.
+      char* basestramp = (char*) malloc(dbnsize * sizeof(char)); // with ampersand
+      char* dbnstramp  = (char*) malloc(dbnsize * sizeof(char)); // with ampersand 
+      int*  dbnadjust  = (int*)  malloc(dbnsize * sizeof(int));
+     // char* basestr    = (char*) malloc(numres * sizeof(char));
+      //char* dbnstr     = (char*) malloc(numres * sizeof(char));
+      if(dbnfp == NULL){    /* Exception Handling */ 
+	    fprintf(stderr, "Error in function %s() in %s at line %d... Unable to open file.\n", __func__, __FILE__, __LINE__);
+	    exit(EXIT_FAILURE);
+      }
+      fgets(basestramp, dbnsize, dbnfp); // skip the first line.
+      fgets(basestramp, dbnsize, dbnfp);
+      fgets(dbnstramp, dbnsize, dbnfp);
+      int len = strlen(basestramp);
+      if(basestramp[len-1] != '\n'){    /* Exception Handling */ 
+	    fprintf(stderr, "Error in function %s() in %s at line %d... No newline encountered.\n", __func__, __FILE__, __LINE__);
+	    exit(EXIT_FAILURE);
+      }
+      basestramp[len-1] = '\0';
+      dbnstramp[len-1] = '\0';
+      len --; 
+//      printf("len = %d\n", len);
+
+      int adjust = 0;
+      int cnt = 0;
+      for(int i=0; i<len; ++i){
+	    if(dbnstramp[i] == '&'){
+		  adjust ++;
+	    }else{
+		  dbnadjust[cnt] = adjust;
+		  cnt ++;
+	    }
+      }
+//      for(int i=0; i<numres; ++i){
+//	    printf("%d",dbnadjust[i]);
+//      }
+      FILE* appletfp = fopen(html_file.c_str(),"w");
+      fprintf(appletfp, "<applet  code=\"VARNA.class\"\n");
+      fprintf(appletfp, "codebase=\"/usr/local/bin/\"\n");
+      fprintf(appletfp, "archive=\"VARNAv3-93.jar\"\n");
+      fprintf(appletfp, "width=\"800\" height=\"800\">\n");
+      fprintf(appletfp, "<param name=\"algorithm\"  value=\"naview\" />\n");
+      fprintf(appletfp, "<param name=\"sequenceDBN\"  value=\"%s\" />\n", basestramp);
+      fprintf(appletfp, "<param name=\"auxBPs\" value=\"");
+      char base1, base2;
+      char edge1[3];
+      char edge2[3];
+      int k=-1;
+      char stericity[6];
+      int dbnindex = 0;
+
+      for(int i=0; i<numres; ++i){
+
+	    base1 = nbp[i].resclass;
+	    for(int j=0; j<nbp[i].numbp; ++j){
+		  k = nbp[i].oth_base_index[j];
+		  if(i>k) continue;
+		  base2 = nbp[k].resclass;
+		  get_edge_name(edge1, nbp[i].name[j][0]);
+		  get_edge_name(edge2, nbp[i].name[j][2]);
+		  if(nbp[i].name[j][3] == 'C'){
+			strcpy(stericity,"cis");
+		  }else if(nbp[i].name[j][3] == 'T'){
+			strcpy(stericity, "trans");
+		  }else{
+			fprintf(stderr, "Error in function %s()... unknown stericity encountered.\n", __func__);
+			exit(EXIT_FAILURE);
+		  }
+//		  printf("Steri=%s\n", stericity);
+		  if(is_canonical_for_varna(base1, base2, nbp[i].name[j]) == TRUE){
+//			int dbnindx_st = i + dbnadjust[i];
+//			int dbnindx_nd = k + dbnadjust[k];
+//			if(dbnstramp[dbnindx_st] != '.'){
+			      fprintf(appletfp, "(%d,%d):color=#0000FF, edge5=%s, edge3=%s, stericity=%s;",i+1, k+1, edge1, edge2, stericity);
+//			}
+		  }else{
+//			int dbnindx_st = i + dbnadjust[i];
+//			int dbnindx_nd = k + dbnadjust[k];
+//			if(dbnstramp[dbnindx_st] != '.' && dbnstramp[dbnindx_nd] != '.'){
+//			      dbnstramp[dbnindx_st] = '.';
+//			      dbnstramp[dbnindx_nd] = '.';
+			      fprintf(appletfp, "(%d,%d):color=#FF0000, edge5=%s, edge3=%s, stericity=%s;",i+1, k+1, edge1, edge2, stericity);
+//			}
+		  }
+
+	    }
+      }
+      fprintf(appletfp, "\"/>\n");
+
+
+      fprintf(appletfp, "<param name=\"structureDBN\" value=\"%s\" />\n", dbnstramp);
+      fprintf(appletfp, "<param name=\"bpStyle\" value=\"lw\" />\n");
+      fprintf(appletfp, "<param name=\"bp\" value=\"#FFFFFF\" />\n");
+      fprintf(appletfp, "<param name=\"title\" value=\"%s\" />\n", accn.c_str());
+      fprintf(appletfp, "</applet>\n");
+
+      free(basestramp);
+      free(dbnstramp);
+      fclose(dbnfp);
+      fclose(appletfp);
+}
 
 void nucbp_scan_rob(struct nucbp *self, ntvariants_t* ntvar, int numres, const char *robfile, struct graph* g)
 {
@@ -256,9 +392,197 @@ int get_numres(char* outfile)
       return nres;
 }
 
+char onz_direction(char* bp1, char* bp2){
+      int e1;
+      int e2;
+      char* bp = bp1;
+      if(bp[0] == 'W' || bp[0] == 'w' || bp[0] == '+'){
+	    e1 = 1;
+      }else if(bp[0] == 'H' || bp[0] == 'h' || bp[0] == 'g'){
+	    e1 = 2;
+      }else if(bp[0] == 'S' || bp[0] == 's' || bp[0] == 'z'){
+	    e1 = 3;
+      }else{
+	    fprintf(stderr, "Error in function %s()... wrong edge name found.\n", __func__);
+	    exit(EXIT_FAILURE);
+      }
+      bp = bp2;
+      if(bp[0] == 'W' || bp[0] == 'w' || bp[0] == '+'){
+	    e2 = 1;
+      }else if(bp[0] == 'H' || bp[0] == 'h' || bp[0] == 'g'){
+	    e2 = 2;
+      }else if(bp[0] == 'S' || bp[0] == 's' || bp[0] == 'z'){
+	    e2 = 3;
+      }else{
+	    fprintf(stderr, "Error in function %s()... wrong edge name found.\n", __func__);
+	    exit(EXIT_FAILURE);
+      }
+      if(e1 < e2) return '+';
+      else return '-';
+}
+
+void onz_lwbp(char* lw, char* bp)
+{
+      char orientation = tolower(bp[3]);
+      char b1;
+      char b2;
+      if(bp[0] =='W' || bp[0] =='w' || bp[0] == '+'){
+	    b1 = 'W';
+      }else if(bp[0] =='H' || bp[0] =='h' || bp[0] == 'g'){
+	    b1 = 'H';
+      }else if(bp[0] =='S' || bp[0] =='s' || bp[0] == 'z'){
+	    b1 = 'S';
+      }
+
+      if(bp[2] =='W' || bp[2] =='w' || bp[2] == '+'){
+	    b2 = 'W';
+      }else if(bp[2] =='H' || bp[2] =='h' || bp[2] == 'g'){
+	    b2 = 'H';
+      }else if(bp[2] =='S' || bp[2] =='s' || bp[2] == 'z'){
+	    b2 = 'S';
+      }
+      lw[0] = orientation;
+      lw[1] = b1;
+      lw[2] = b2;
+      lw[3] = '\0';
+}
+void print_onz_detail(FILE* fp, int* sorted, int v1, int v2, int v3, int v4, int vfirst, struct nucbp* self, struct graph* g)
+{
+      char lwbp[5];
+      fprintf(fp, "  ONZ-SEQ: ");
+      fprintf(fp, "%c",self[v1].resclass);
+      fprintf(fp, "%c",self[v2].resclass);
+      fprintf(fp, "%c",self[v3].resclass);
+      fprintf(fp, "%c    ",self[v4].resclass);
+
+      fprintf(fp, "  ONZ-RESID: ");
+
+      fprintf(fp, "%d-",sorted[0]+1);
+      fprintf(fp, "%d-",sorted[1]+1);
+      fprintf(fp, "%d-",sorted[2]+1);
+      fprintf(fp, "%d",sorted[3]+1);
+
+
+      fprintf(fp, "  ONZ-EDGES: ");
+      int index = graph_edge_index(g, v1, v2);
+      onz_lwbp(lwbp, self[v1].name[index]);
+      fprintf(fp, "%s-", lwbp);
+      index = graph_edge_index(g, v2, v3);
+      onz_lwbp(lwbp, self[v2].name[index]);
+      fprintf(fp, "%s-", lwbp);
+//      fprintf(fp, "%s-",self[v2].name[index]);
+      index = graph_edge_index(g, v3, v4);
+      onz_lwbp(lwbp, self[v3].name[index]);
+      fprintf(fp, "%s-", lwbp);
+//      fprintf(fp, "%s-",self[v3].name[index]);
+      index = graph_edge_index(g, v4, vfirst);
+      onz_lwbp(lwbp, self[v4].name[index]);
+      fprintf(fp, "%s", lwbp);
+//      fprintf(fp, "%s-",self[v4].name[index]);
+}
+void comp_onz(FILE* fp, struct nucbp* self, struct graph* g, int comp_size, int* array)
+{
+      if( comp_size != 4 ){    /* Exception Handling */ 
+	    fprintf(stderr, "Error in function %s()... invalid component size found.\n", __func__);
+	    exit(EXIT_FAILURE);
+      }
+      int v1= array[0];
+      int v1adj1 = graph_edge_at(g, v1, 0);
+      int v1adj2 = graph_edge_at(g, v1, 1);
+      char bp1[5];
+      char bp2[5];
+      strcpy(bp1, self[v1].name[0]);
+      strcpy(bp2, self[v1].name[1]);
+//      string bpname1 = self[v1].name[0];
+//      string bpname2 = self[v1].name[1];
+
+      if(v1adj1 > v1adj2){
+	    int tmp = v1adj1;
+	    v1adj1 = v1adj2;
+	    v1adj2 = tmp;
+	    char strtmp[5];
+	    strcpy(strtmp, bp1);
+	    strcpy(bp1, bp2);
+	    strcpy(bp2, strtmp);
+      }
+      char direc = onz_direction(bp1, bp2);
+      if(v1adj1 == array[1] && v1adj2 == array[3]){
+	    fprintf(fp, "ONZ-CLASS: O");
+	    fprintf(fp,"%c", direc);
+	    print_onz_detail(fp, array,v1, v1adj1, array[2], v1adj2, v1, self, g);
+      }else if(v1adj1 == array[1] && v1adj2 == array[2]){
+	    fprintf(fp, "ONZ-CLASS: N");
+	    fprintf(fp,"%c", direc);
+	    print_onz_detail(fp, array, v1, v1adj1, array[3], v1adj2, v1, self, g);
+      }else if(v1adj1 == array[2] && v1adj2 == array[3]){
+	    fprintf(fp, "ONZ-CLASS: Z");
+	    fprintf(fp,"%c", direc);
+	    print_onz_detail(fp, array, v1, v1adj1, array[1], v1adj2, v1, self, g);
+      }else{
+	    fprintf(stderr, "Error in function %s()... invalid onz-class encountered.\n", __func__);
+	    exit(EXIT_FAILURE);
+      }
+
+//      for(int i=0; i<comp_size; ++i){
+//	    v1 = array[i];
+//	    int deg = g->deg[v1];
+//	    for(int j=0; j<deg; ++j){
+//		  v2 = graph_edge_at(g, v1, j);
+//		  int index = j;
+//
+//		  char ith_ins[5];
+//		  ith_ins[1]= self[v1].ins;
+//		  char jth_ins[5];
+//		  jth_ins[1]= self[v2].ins;
+//
+//		  ith_ins[0] = '/';
+//		  jth_ins[0] = '/';
+//
+//		  if(ith_ins[1] == '?'){
+//			ith_ins[1] = ' ';
+//			ith_ins[0] = ' ';
+//		  }
+//		  if(jth_ins[1] == '?'){
+//			jth_ins[1] = ' ';
+//			jth_ins[0] = ' ';
+//		  }
+//
+//		  ith_ins[2] = '\0';
+//		  jth_ins[2] = '\0';
+//
+//
+//		  string bpname = self[v1].name[index];
+//		  double enerval = graph_get_wt(g, v1, index); 
+//		  int deg = graph_deg(g, v2);
+//		  fprintf(file_adj, "EDGE %5d %5d  %2d  %c:%c-%4s %8.2lf %c:%c %s %5d%2s %3s %5d%2s %3s %3s "
+//			      "%3s\n",
+//			      v1+1, 
+//			      v2+1,
+//			      deg,
+//			      self[v1].resclass,
+//			      self[v2].resclass,
+//			      bpname.c_str(),
+//			      enerval,
+//			      seq->sec_seq_str[v1],
+//			      seq->sec_seq_str[v2],
+//			      syspar->type.c_str(),
+//			      self[v1].cifid,
+//			      ith_ins,
+//			      self[v1].chain,
+//			      self[v2].cifid,
+//			      jth_ins,
+//			      self[v2].chain,
+//			      self[v1].resname,
+//			      self[v2].resname);
+//	    }
+//      }
+
+
+
+}
 
 void print_compo_edge_info(struct nucbp* self, struct graph* g,
-	    struct djset* set,  sysparams* syspar, sequence_t* seq, int comp_size, int vertex, FILE* file_adj)
+	    struct djset* set,  sysparams* syspar, sequence_t* seq, int comp_size, int vertex, FILE* file_adj, char* comp_name)
 {
       int v1=vertex;
       int v2=vertex;
@@ -267,6 +591,12 @@ void print_compo_edge_info(struct nucbp* self, struct graph* g,
 //      for(int i=0; i<comp_size; ++i){
 //	    fprintf(file_adj, "%d, ",array[i]);
 //      }
+      fprintf(file_adj,"COMP   %s %5d  %5s  ", syspar->accn.c_str(), vertex+1, comp_name);
+      if(strcmp(comp_name, "Q4") == 0){
+	    comp_onz(file_adj, self, g, comp_size, array);
+      }
+      fprintf(file_adj, "\n");
+      fprintf(file_adj,"CARD   %5d\n",comp_size);
       fprintf(file_adj, "\n");
       fprintf(file_adj, "HEAD    SL    SL DEG  EDG-TYPE      WT  SP  TYP  RES    CHN  RES    CHN  BS  BS\n");
       fprintf(file_adj, "        --    -- ---  --------      --  --  ---  ---    ---  ---    ---  --  --\n");
@@ -456,9 +786,7 @@ void print_adjinfo(struct nucbp* self, int nres, struct djset* set,
 	    if(cycles < syspar->_num_cycles) continue;
 	    char comp_name[10];
 	    graph_compo_isomorph_name(g, set, i, comp_name);
-	    fprintf(adj_file,"COMP   %s %5d  %5s\n", syspar->accn.c_str(), i+1, comp_name);
-	    fprintf(adj_file,"CARD   %5d\n",comp_size);
-	    print_compo_edge_info(self, g, set,  syspar, &seq, comp_size, i, adj_file);
+	    print_compo_edge_info(self, g, set,  syspar, &seq, comp_size, i, adj_file, comp_name);
 	    syspar->_total_count ++;
 	    syspar->total_per_structure ++; 
       }

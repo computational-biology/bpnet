@@ -38,7 +38,14 @@
 using namespace std;
 using std::showpoint;
 
-void gen_varna_applet(string dirname, string accn, int** matrix, int numres);
+struct varnamap{
+      int resindex[20];
+      char bpname[20][5];
+      int  numres;
+};
+
+
+void gen_varna_applet(string dirname, string accn, int** matrix, int numres, struct varnamap* varmap);
 double dist3d(double x1, double y1, double z1, double x2, double y2, double z2){
       return sqrt ( (x1-x2) * (x1-x2) + (y1-y2) * (y1-y2) + (z1-z2) * (z1-z2) );
 }
@@ -3447,7 +3454,12 @@ void overlap_gen_contact_map_for_base_pair(int numres, string dirname, string ac
 //	    exit(EXIT_FAILURE);
 //      }
 
+      struct varnamap * varmap = (struct varnamap*) malloc (numres * sizeof(struct varnamap));
+      for(int i=0; i<numres; ++i){
+	    varmap[i].numres = 0;
+      }
       int** mat = (int**) malloc(numres*sizeof(int*));
+
 
       for(int i=0; i<numres; ++i){
 	    mat[i] = (int*) malloc(numres*sizeof(int));
@@ -3655,9 +3667,10 @@ void overlap_gen_contact_map_for_base_pair(int numres, string dirname, string ac
       fclose(robfp);
 
       gen_all_contact_bpseq(dirname, accn, mat, numres);
-      gen_varna_applet(dirname, accn, mat, numres);
+//      gen_varna_applet(dirname, accn, mat, numres, varmap);
 
 
+      free(varmap);
       for(int i=0; i<numres; ++i){
 	    free(mat[i]);
       }
@@ -3684,7 +3697,12 @@ void overlap_gen_contact_map(int numres, string dirname, string accn, ovlp_stat*
 //	    exit(EXIT_FAILURE);
 //      }
 
+      struct varnamap * varmap = (struct varnamap*) malloc (numres * sizeof(struct varnamap));
+      for(int i=0; i<numres; ++i){
+	    varmap[i].numres = 0;
+      }
       int** mat = (int**) malloc(numres*sizeof(int*));
+
 
       for(int i=0; i<numres; ++i){
 	    mat[i] = (int*) malloc(numres*sizeof(int));
@@ -3695,6 +3713,7 @@ void overlap_gen_contact_map(int numres, string dirname, string accn, ovlp_stat*
 		  mat[i][j] = 0;
 	    }
       }
+      
       for(int i=0; i<numres; ++i){
 	    std::string chn = rna->mOutArray->mOutFileRowArray[i]->get_chain_name();
 	    flg = 0;
@@ -3794,6 +3813,19 @@ void overlap_gen_contact_map(int numres, string dirname, string accn, ovlp_stat*
 			 strcmp(bpname,"G:U")==0 ||
 			 strcmp(bpname,"U:G")==0 
 			 )){
+//		  printf("row, col = %d, %d\n", row, col);
+		  varmap[row].resindex[varmap[row].numres] = col;
+		  strcpy(varmap[row].bpname[varmap[row].numres], basepair);
+		  varmap[row].numres = varmap[row].numres + 1;
+		  
+		  varmap[col].resindex[varmap[col].numres] = col;
+		  char revname[5];
+		  strcpy(revname, basepair);
+		  revname[0] = basepair[2];
+		  revname[2] = basepair[0];
+		  strcpy(varmap[col].bpname[varmap[col].numres], revname);
+		  varmap[col].numres = varmap[col].numres + 1;
+
 		  mat[row][col] = 5;
 		  mat[col][row] = 5;
 		  if(strcmp(bptype, "BF") == 0){
@@ -3804,6 +3836,19 @@ void overlap_gen_contact_map(int numres, string dirname, string accn, ovlp_stat*
 			strcmp(bptype,"TP")==0||
 			strcmp(bptype,"BF")==0
 			){
+//		  printf("row, col = %d, %d\n", row, col);
+		  varmap[row].resindex[varmap[row].numres] = col;
+		  strcpy(varmap[row].bpname[varmap[row].numres], basepair);
+		  varmap[row].numres = varmap[row].numres + 1;
+
+		  varmap[col].resindex[varmap[col].numres] = col;
+		  char revname[5];
+		  strcpy(revname, basepair);
+		  revname[0] = basepair[2];
+		  revname[2] = basepair[0];
+		  strcpy(varmap[col].bpname[varmap[col].numres], revname);
+		  varmap[col].numres = varmap[col].numres + 1;
+
 		  mat[row][col] = 4;
 		  mat[col][row] = 4;
 		  if(strcmp(bptype, "BF") == 0){
@@ -3821,81 +3866,81 @@ void overlap_gen_contact_map(int numres, string dirname, string accn, ovlp_stat*
 
 	    }
       }
-      FILE* gpfp = fopen(gpfile.c_str(), "w");
-      if(gpfp == NULL){    /* Exception Handling */ 
-	    fprintf(stderr, "Error in function %s() in %s at line %d... Unable to open file.\n", __func__, __FILE__, __LINE__);
-	    exit(EXIT_FAILURE);
-      }
-      fprintf(gpfp,"unset key\n");
-      fprintf(gpfp,"set style increment default\n");
-      fprintf(gpfp,"set view map scale 1\n");
-      fprintf(gpfp,"set style data lines\n");
-      fprintf(gpfp,"unset xtics\n");
-      fprintf(gpfp,"unset ytics\n");
-      fprintf(gpfp,"set ztics border in scale 0,0 nomirror norotate  autojustify\n");
-      fprintf(gpfp,"unset cbtics\n");
-      fprintf(gpfp,"set rtics axis in scale 0,0 nomirror norotate  autojustify\n");
-      fprintf(gpfp,"set title \"Contact map distribution. accn:%s\"\n", accn.c_str()); 
-      fprintf(gpfp,"set zrange [ * : * ] noreverse writeback\n");
-      //fprintf(gpfp,"set cblabel \"Score\"\n"); 
-      int addon = stat->chncnt > 0 ? 1 : 0;
-      int maxcol = 8 + addon;
-      fprintf(gpfp, "set palette maxcolors %d\n", maxcol);
-      fprintf(gpfp,"set cbrange [ 0.0000 : %8.4lf ] noreverse nowriteback\n", (double)(maxcol));
-      char palette[1024];
-      strcpy(palette, "set palette define (0 \"#252121\", 1 \"#ff2bd5\", 2 \"#a8a8a8\", 3 \"#ffbc00\", 4 \"red\", 5 \"#0055ff\", 6 \"green\", 7 \"white\"");
-//      strcpy(palette, "set palette define (0 \"#000030\", 0 \"black\", 1 \"yellow\", 1 \"yellow\", 2 \"gold\", 2 \"gold\", 3 \"orange\", 3 \"orange\", 4 \"red\", 4 \"red\", 5 \"#ff2bd5\", 5 \"#ff2bd5\", 6 \"green\", 6 \"green\", 7 \"white\", 7 \"white\"");
-      char tmpstr[100];
-      for(int i=0; i<addon; ++i){
-	    sprintf(tmpstr, ", %d \"black\"", 8+i);
-	    strcat(palette, tmpstr);
-
-      }
-      strcat(palette, ")\n");
-      if(addon == 0){
-	    fprintf(gpfp, "set cbtics nomirror out (\"FAR\" 0.5, \"ADJA\" 1.5, \"ASTK\" 2.5, \"CROS\" 3.5, \"NC-BP\" 4.5,\"C-BP\" 5.5,\"CLOS\" 6.5, \"PROX\" 7.5)\n");
-      }else{
-	    fprintf(gpfp, "set cbtics nomirror out (\"BGCOL\" 0.5, \"ADJA\" 1.5, \"ASTK\" 2.5, \"CROS\" 3.5, \"NC-BP\" 4.5,\"C-BP\" 5.5,\"CLOS\" 6.5, \"PROX\" 7.5, \"CHN\" 8.5)\n");
-      }
-      
-      /*switch(range){
-	    case 1 : strcat(palette, ",  8  \"#ababab\")\n");
-		     break;
-	    case 2 : strcat(palette, ",  8 rgb \"gray20\",  9 rgb \"gray40\")\n");
-		     break;
-	    case 3 : strcat(palette, ",  8 rgb \"gray20\",  9 rgb \"gray40\",  10 rgb \"gray60\")\n");
-		     break;
-	    case 4 : strcat(palette, ",  8 \"#464242\",  9  \"#5A5757\",  10 \"#7E7979\", 11 \"#181212\")\n");
-		     break;
-	    default:
-		     strcat(palette, ")\n");
-      }*/
-      fprintf(gpfp,"set rrange [ * : * ] noreverse writeback\n");
-//      fprintf(gpfp,"set palette define (0 \"black\", 0 \"black\", 1 \"yellow\", 1 \"yellow\", 2 \"gold\", 2 \"gold\", 3 \"orange\", 3 \"orange\", 4 \"red\", 4 \"red\", 5 \"blue\", 5 \"blue\", 6 \"green\", 6 \"green\", 7 \"white\", 7 \"white\")\n");
-      fprintf(gpfp, "%s", palette);
-      fprintf(gpfp,"set term postscript\n");
-      fprintf(gpfp,"set output \"%s.ps\"\n", accn.c_str());
-
-      fprintf(gpfp, "$mapdata << EOD\n");
-      for(int i=0; i<numres; ++i){
-	    fprintf(gpfp," ,%2d", i+1);
-      }
-      fprintf(gpfp,"\n");
-      for(int i=0; i<numres; ++i){
-	    fprintf(gpfp,"%d", i+1);
-	    for(int j=0; j<numres; ++j){
-		  fprintf(gpfp,",%d",mat[i][j]);
-	    }
-	    fprintf(gpfp,"\n");
-      }
-      fprintf(gpfp, "EOD\n");
-
-
-
-      fprintf(gpfp,"set datafile separator comma\n");
-      fprintf(gpfp,"plot '$mapdata' matrix rowheaders columnheaders using 1:2:3 with image\n");
-      fprintf(gpfp,"set datafile separator\n");
-
+//      FILE* gpfp = fopen(gpfile.c_str(), "w");
+//      if(gpfp == NULL){    /* Exception Handling */ 
+//	    fprintf(stderr, "Error in function %s() in %s at line %d... Unable to open file.\n", __func__, __FILE__, __LINE__);
+//	    exit(EXIT_FAILURE);
+//      }
+//      fprintf(gpfp,"unset key\n");
+//      fprintf(gpfp,"set style increment default\n");
+//      fprintf(gpfp,"set view map scale 1\n");
+//      fprintf(gpfp,"set style data lines\n");
+//      fprintf(gpfp,"unset xtics\n");
+//      fprintf(gpfp,"unset ytics\n");
+//      fprintf(gpfp,"set ztics border in scale 0,0 nomirror norotate  autojustify\n");
+//      fprintf(gpfp,"unset cbtics\n");
+//      fprintf(gpfp,"set rtics axis in scale 0,0 nomirror norotate  autojustify\n");
+//      fprintf(gpfp,"set title \"Contact map distribution. accn:%s\"\n", accn.c_str()); 
+//      fprintf(gpfp,"set zrange [ * : * ] noreverse writeback\n");
+//      //fprintf(gpfp,"set cblabel \"Score\"\n"); 
+//      int addon = stat->chncnt > 0 ? 1 : 0;
+//      int maxcol = 8 + addon;
+//      fprintf(gpfp, "set palette maxcolors %d\n", maxcol);
+//      fprintf(gpfp,"set cbrange [ 0.0000 : %8.4lf ] noreverse nowriteback\n", (double)(maxcol));
+//      char palette[1024];
+//      strcpy(palette, "set palette define (0 \"#252121\", 1 \"#ff2bd5\", 2 \"#a8a8a8\", 3 \"#ffbc00\", 4 \"red\", 5 \"#0055ff\", 6 \"green\", 7 \"white\"");
+////      strcpy(palette, "set palette define (0 \"#000030\", 0 \"black\", 1 \"yellow\", 1 \"yellow\", 2 \"gold\", 2 \"gold\", 3 \"orange\", 3 \"orange\", 4 \"red\", 4 \"red\", 5 \"#ff2bd5\", 5 \"#ff2bd5\", 6 \"green\", 6 \"green\", 7 \"white\", 7 \"white\"");
+//      char tmpstr[100];
+//      for(int i=0; i<addon; ++i){
+//	    sprintf(tmpstr, ", %d \"black\"", 8+i);
+//	    strcat(palette, tmpstr);
+//
+//      }
+//      strcat(palette, ")\n");
+//      if(addon == 0){
+//	    fprintf(gpfp, "set cbtics nomirror out (\"FAR\" 0.5, \"ADJA\" 1.5, \"ASTK\" 2.5, \"CROS\" 3.5, \"NC-BP\" 4.5,\"C-BP\" 5.5,\"CLOS\" 6.5, \"PROX\" 7.5)\n");
+//      }else{
+//	    fprintf(gpfp, "set cbtics nomirror out (\"BGCOL\" 0.5, \"ADJA\" 1.5, \"ASTK\" 2.5, \"CROS\" 3.5, \"NC-BP\" 4.5,\"C-BP\" 5.5,\"CLOS\" 6.5, \"PROX\" 7.5, \"CHN\" 8.5)\n");
+//      }
+//      
+//      /*switch(range){
+//	    case 1 : strcat(palette, ",  8  \"#ababab\")\n");
+//		     break;
+//	    case 2 : strcat(palette, ",  8 rgb \"gray20\",  9 rgb \"gray40\")\n");
+//		     break;
+//	    case 3 : strcat(palette, ",  8 rgb \"gray20\",  9 rgb \"gray40\",  10 rgb \"gray60\")\n");
+//		     break;
+//	    case 4 : strcat(palette, ",  8 \"#464242\",  9  \"#5A5757\",  10 \"#7E7979\", 11 \"#181212\")\n");
+//		     break;
+//	    default:
+//		     strcat(palette, ")\n");
+//      }*/
+//      fprintf(gpfp,"set rrange [ * : * ] noreverse writeback\n");
+////      fprintf(gpfp,"set palette define (0 \"black\", 0 \"black\", 1 \"yellow\", 1 \"yellow\", 2 \"gold\", 2 \"gold\", 3 \"orange\", 3 \"orange\", 4 \"red\", 4 \"red\", 5 \"blue\", 5 \"blue\", 6 \"green\", 6 \"green\", 7 \"white\", 7 \"white\")\n");
+//      fprintf(gpfp, "%s", palette);
+//      fprintf(gpfp,"set term postscript\n");
+//      fprintf(gpfp,"set output \"%s.ps\"\n", accn.c_str());
+//
+//      fprintf(gpfp, "$mapdata << EOD\n");
+//      for(int i=0; i<numres; ++i){
+//	    fprintf(gpfp," ,%2d", i+1);
+//      }
+//      fprintf(gpfp,"\n");
+//      for(int i=0; i<numres; ++i){
+//	    fprintf(gpfp,"%d", i+1);
+//	    for(int j=0; j<numres; ++j){
+//		  fprintf(gpfp,",%d",mat[i][j]);
+//	    }
+//	    fprintf(gpfp,"\n");
+//      }
+//      fprintf(gpfp, "EOD\n");
+//
+//
+//
+//      fprintf(gpfp,"set datafile separator comma\n");
+//      fprintf(gpfp,"plot '$mapdata' matrix rowheaders columnheaders using 1:2:3 with image\n");
+//      fprintf(gpfp,"set datafile separator\n");
+//
 //      gen_post_script(mat, numres);
 
 
@@ -3903,12 +3948,13 @@ void overlap_gen_contact_map(int numres, string dirname, string accn, ovlp_stat*
       strcpy(accnno, accn.c_str());
       ps_create_heatmap((pdb_accn+".ps").c_str(), accnno, mat, numres, chain, nmrmodel);
 
-      fclose(gpfp);
+//      fclose(gpfp);
       fclose(robfp);
 
       gen_all_contact_bpseq(dirname, accn, mat, numres);
-      gen_varna_applet(dirname, accn, mat, numres);
+      gen_varna_applet(dirname, accn, mat, numres, varmap);
 
+      free(varmap);
 
       for(int i=0; i<numres; ++i){
 	    free(mat[i]);
@@ -3918,7 +3964,61 @@ void overlap_gen_contact_map(int numres, string dirname, string accn, ovlp_stat*
 
 }
 
-void gen_varna_applet(string dirname, string accn, int** matrix, int numres){
+void get_edge_name_ovlp(char name[], char esymb){
+      if(esymb == 'W' || esymb == 'w' || esymb == '+'){
+	    strcpy(name, "wc");
+      }else if(esymb == 'S' || esymb == 's' || esymb == 'z'){
+	    strcpy(name, "s");
+      }else if(esymb == 'H' || esymb == 'h' || esymb == 'g'){
+	    strcpy(name, "h");
+      }else{
+	    fprintf(stderr, "Error in function %s()... wrong edge name encountered.\n", __func__);
+	    exit(EXIT_FAILURE);
+      }
+}
+ int is_canonical_for_varna_ovlp(char resi1, char resi2, char* bpname){
+       if(strcmp(bpname, "W:WC") != 0) return FALSE;
+       char res1 = toupper(resi1);
+       char res2 = toupper(resi2);
+
+       if(res1 == 'G' && res2 == 'C') return TRUE;
+       if(res1 == 'C' && res2 == 'G') return TRUE;
+
+       if(res1 == 'G' && res2 == 'U') return TRUE;
+       if(res1 == 'U' && res2 == 'G') return TRUE;
+
+       if(res1 == 'A' && res2 == 'U') return TRUE;
+       if(res1 == 'U' && res2 == 'A') return TRUE;
+
+       return FALSE;
+ }
+void print_bp_stericity_for_verna(FILE* fp, struct varnamap* varmap, int i, int j)
+{
+      char bs1[5];
+      char bs2[5];
+      char steri[6];
+//      printf("Start\n");
+      for(int k=0; k<varmap[i].numres; ++k){
+//	    printf("%d:%d, %d", i, j, varmap[i].resindex[k]);
+	    if(varmap[i].resindex[k] == j){
+//		  printf("Ent\n");
+		  get_edge_name_ovlp(bs1, varmap[i].bpname[k][0]);
+		  get_edge_name_ovlp(bs2, varmap[i].bpname[k][2]);
+		  if(varmap[i].bpname[k][3] == 'C'){
+			strcpy(steri, "cis");
+		  }else{
+			strcpy(steri, "trans");
+		  }
+		  fprintf(fp, "edge5=%s, edge3=%s, stericity=%s", bs1, bs2, steri);
+		  return;
+	    }
+      }
+      fprintf(stderr, "Error in function %s()... \n", __func__);
+      exit(EXIT_FAILURE);
+      
+
+}
+void gen_varna_applet(string dirname, string accn, int** matrix, int numres, struct varnamap* varmap){
       std::string pdb_accn = dirname+accn;
       std::string dbnfile = pdb_accn+".dbn";
       std::string html_file = pdb_accn+".html";
@@ -3955,12 +4055,16 @@ void gen_varna_applet(string dirname, string accn, int** matrix, int numres){
       for(int i=0; i<numres; ++i){
 	    for(int j=i+1; j<numres; ++j){
 		  if(matrix[i][j] == 4){
-			fprintf(appletfp, "(%d,%d):thickness=1,color=#00FF00;",i+1, j+1);
+			fprintf(appletfp, "(%d,%d):color=#FF0000,",i+1, j+1);
+			print_bp_stericity_for_verna(appletfp, varmap, i, j);
+			fprintf(appletfp, ";");
+
 		  }else if(matrix[i][j] == 5){
-			;
-			//fprintf(appletfp, "(%d,%d):thickness=1,color=#FF0000;",i+1, j+1);
+			fprintf(appletfp, "(%d,%d):color=#0000FF,",i+1, j+1);
+			print_bp_stericity_for_verna(appletfp, varmap, i, j);
+			fprintf(appletfp, ";");
 		  }else if(matrix[i][j] == 6){
-			fprintf(appletfp, "(%d,%d):thickness=1,color=#FF0000;",i+1, j+1);
+			fprintf(appletfp, "(%d,%d):thickness=1,color=#00FF00;",i+1, j+1);
 		  }else if(matrix[i][j] == 7){
 			//fprintf(appletfp, "(%d,%d):thickness=1,color=#FF0000;",i+1, j+1);
 			;
@@ -3970,6 +4074,8 @@ void gen_varna_applet(string dirname, string accn, int** matrix, int numres){
       fprintf(appletfp, "\"/>\n");
 
 
+      fprintf(appletfp, "<param name=\"bp\" value=\"#FFFFFF\" />\n");
+      fprintf(appletfp, "<param name=\"bpStyle\" value=\"lw\" />\n");
       fprintf(appletfp, "<param name=\"title\" value=\"%s\" />\n", accn.c_str());
       fprintf(appletfp, "</applet>\n");
 
