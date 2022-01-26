@@ -127,6 +127,9 @@ RUNTIME OPTIONS
 
 		--help
 			Shows a small help on terminal.
+			
+		--pub
+			Prints the citation details of BPNet.
 
 		--genhelp
 			Generates this help.md file in the current directory.

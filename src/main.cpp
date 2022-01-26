@@ -39,7 +39,14 @@ extern "C" void callbpfindc(char [],  char [], char [], char [], char [], char [
 using namespace std;
 // using namespace boost;
 
-
+void print_pub()
+{
+      fprintf(stdout, "Please cite the bpnet as:\n");
+      fprintf(stdout,"Parthajit Roy, Dhananjay Bhattacharyya,");
+      fprintf(stdout, " \"Contact networks in RNA: a structural bioinformatics study with a new tool\", "); 
+      fprintf(stdout, "Journal of Computer Aided Molecular Design (2022). "); 
+      fprintf(stdout, "doi: https://doi.org/10.1007/s10822-021-00438-x\n");
+}
 
 void print_curr_date_time(FILE* fp){
     char s[200];
@@ -924,9 +931,12 @@ int main(int argc, char* argv[]) {
     for (int i = 1; i < argc; ++i) {
         std::string arg = argv[i];
         if(arg.substr(0,6) == "--help"){
-            show_help();
-            exit(1);
-        }else if(arg.substr(0,7) == "-chain="){
+	      show_help();
+	      exit(EXIT_SUCCESS);
+	}else if(arg.substr(0,5) == "--pub"){
+	      print_pub();
+	      exit(EXIT_SUCCESS);
+	}else if(arg.substr(0,7) == "-chain="){
 	      strcpy(syspar.chainparam, "-ML");
 	      strcpy(syspar.chainvalparam,arg.substr(7).c_str());
 	}else if(arg.substr(0,8)=="-hbdist="){
